@@ -1,15 +1,16 @@
 // controllers/attendanceController.js
-const Attendance = require("../models/attendanceModel");
+const Attendance = require("../models/studentAttendanceModel");
 const User = require("../models/userModel");
 
+// Mark Attendance
 // Mark Attendance
 exports.markAttendance = async (req, res) => {
   const { studentId, status, date } = req.body;
 
   try {
     const student = await User.findById(studentId);
-    if (!student || student.role !== "student") {
-      return res.status(404).json({ message: "Student not found" });
+    if (!student || student.role !== "student" || (student.status !== "active" && student.status !== "re-enrolled")) {
+      return res.status(404).json({ message: "Student not found or not eligible" });
     }
 
     // If a date is provided, use it; otherwise, set to today at midnight
@@ -41,6 +42,7 @@ exports.markAttendance = async (req, res) => {
   }
 };
 
+
 // Mark Bulk Attendance for Multiple Students
 exports.markBulkAttendance = async (req, res) => {
   const { attendances } = req.body;
@@ -52,8 +54,8 @@ exports.markBulkAttendance = async (req, res) => {
   try {
     const bulkOperations = attendances.map(async ({ studentId, status, date }) => {
       const student = await User.findById(studentId);
-      if (!student || student.role !== "student") {
-        return { studentId, error: "Student not found" };
+      if (!student || student.role !== "student" || (student.status !== "active" && student.status !== "re-enrolled")) {
+        return { studentId, error: "Student not found or not eligible" };
       }
 
       // Set attendance date to provided date or default to today at midnight
@@ -89,17 +91,18 @@ exports.markBulkAttendance = async (req, res) => {
   }
 };
 
+
 // Get All Students Attendance Sorted by Date
 exports.getAllAttendanceSortedByDate = async (req, res) => {
-  console.log("Received date parameter:", req.query.date);
+
   try {
     // Check if the date parameter is provided
-    const { date } = req.query;
+    const { date, batch } = req.query;
     if (!date) {
       return res.status(400).json({ message: "Date query parameter is required." });
     }
 
-    // Try to parse the date; if invalid, catch the error
+    // Parse and validate the date
     const targetDate = new Date(date);
     if (isNaN(targetDate.getTime())) {
       return res.status(400).json({ message: "Invalid date format. Use YYYY-MM-DD format." });
@@ -110,18 +113,42 @@ exports.getAllAttendanceSortedByDate = async (req, res) => {
     const nextDay = new Date(targetDate);
     nextDay.setDate(targetDate.getDate() + 1);
 
-    // Attempt to retrieve attendance records
-    const attendanceRecords = await Attendance.find({
-      date: { $gte: targetDate, $lt: nextDay }
-    }).populate("student", "name");
+    // First, retrieve attendance records based on date, limiting the populated fields
+    let attendanceRecords = await Attendance.find({
+      date: { $gte: targetDate, $lt: nextDay },
+    }).populate({
+      path: 'student',
+      select: 'name batch', // Only fetch name and batch ID from student
+      populate: {
+        path: 'batch', // Populate the batch info
+        select: '_id name' // Only fetch the batch ID and name
+      }
+    });
 
-    res.status(200).json(attendanceRecords);
+    // If batch parameter is provided, filter attendance records by batch ID
+    if (batch) {
+      attendanceRecords = attendanceRecords.filter(record =>
+        record.student.batch && record.student.batch._id.toString() === batch
+      );
+    }
+
+    // Map to only return the necessary fields, including the status
+    const response = attendanceRecords.map(record => ({
+      studentName: record.student.name,
+      batchId: record.student.batch ? record.student.batch._id : null,
+      batchName: record.student.batch ? record.student.batch.name : null,
+      status: record.status, // Include the status field
+      date: record.date, // Include the date for reference
+    }));
+
+    res.status(200).json(response);
   } catch (err) {
     // Log the error for debugging
-    console.error("Error retrieving attendance by date:", err);
+    console.error("Error retrieving attendance by date and batch:", err);
     res.status(500).json({ message: "Server error. Please try again later." });
   }
 };
+
 
 // Get All Attendance Records - Only for admin and teacher
 exports.getAllAttendance = async (req, res) => {

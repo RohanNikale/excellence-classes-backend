@@ -10,17 +10,11 @@ const attendanceSchema = new mongoose.Schema({
   status: { 
     type: String, 
     required: true, 
-    enum: ["present", "absent", "late"] 
+    enum: ["present", "absent", "late","Absent(Informed)"] 
   },
   date: { 
     type: Date, 
     required: true,
-    default: function() {
-      // Default to today's date at midnight if no date is provided
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return today;
-    }
   },
   markedBy: { 
     type: mongoose.Schema.Types.ObjectId, 

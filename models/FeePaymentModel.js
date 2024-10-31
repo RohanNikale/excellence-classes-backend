@@ -1,7 +1,7 @@
 // models/paymentModel.js
 const mongoose = require("mongoose");
 
-const paymentSchema = new mongoose.Schema({
+const FeePaymentSchema = new mongoose.Schema({
   student: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   amount: { type: Number, required: true },
   date: { type: Date, default: Date.now },
@@ -12,5 +12,5 @@ const paymentSchema = new mongoose.Schema({
   },
 });
 
-const Payment = mongoose.model("Payment", paymentSchema);
-module.exports = Payment;
+const FeePayment = mongoose.model("Payment", FeePaymentSchema);
+module.exports = FeePayment;

@@ -1,14 +1,14 @@
-// controllers/paymentController.js
-const Payment = require("../models/FeePaymentModel");
+// controllers/FeePaymentController.js
+const FeePayment = require("../models/FeePaymentModel");
 
 // Create a new transaction
 exports.addTransaction = async (req, res) => {
   const { student, amount, method } = req.body;
 
   try {
-    const newPayment = new Payment({ student, amount, method });
-    await newPayment.save();
-    res.status(201).json({ message: "Transaction added successfully", payment: newPayment });
+    const newFeePayment = new FeePayment({ student, amount, method });
+    await newFeePayment.save();
+    res.status(201).json({ message: "Transaction added successfully", FeePayment: newFeePayment });
   } catch (error) {
     console.error("Error adding transaction:", error);
     res.status(500).json({ message: "Server error" });
@@ -21,17 +21,17 @@ exports.updateTransaction = async (req, res) => {
   const { amount, method } = req.body;
 
   try {
-    const updatedPayment = await Payment.findByIdAndUpdate(
+    const updatedFeePayment = await FeePayment.findByIdAndUpdate(
       id,
       { amount, method },
       { new: true }
     );
 
-    if (!updatedPayment) {
+    if (!updatedFeePayment) {
       return res.status(404).json({ message: "Transaction not found" });
     }
 
-    res.json({ message: "Transaction updated successfully", payment: updatedPayment });
+    res.json({ message: "Transaction updated successfully", FeePayment: updatedFeePayment });
   } catch (error) {
     console.error("Error updating transaction:", error);
     res.status(500).json({ message: "Server error" });
@@ -43,9 +43,9 @@ exports.deleteTransaction = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const deletedPayment = await Payment.findByIdAndDelete(id);
+    const deletedFeePayment = await FeePayment.findByIdAndDelete(id);
 
-    if (!deletedPayment) {
+    if (!deletedFeePayment) {
       return res.status(404).json({ message: "Transaction not found" });
     }
 
@@ -61,10 +61,21 @@ exports.getAllTransactions = async (req, res) => {
   const { studentId } = req.query;
 
   try {
-    const query = studentId ? { student: studentId } : {};
-    const payments = await Payment.find(query).populate("student", "name email");
+    let query = {};
 
-    res.json({ payments });
+    if (req.user.role === "admin") {
+      // Admin can view all transactions or filter by specific student if provided in query
+      query = studentId ? { student: studentId } : {};
+    } else if (req.user.role === "student") {
+      // Students can only view their own transactions
+      query = { student: req.user._id };
+    } else {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const FeePayments = await FeePayment.find(query).populate("student", "name email");
+
+    res.json({ FeePayments });
   } catch (error) {
     console.error("Error retrieving transactions:", error);
     res.status(500).json({ message: "Server error" });

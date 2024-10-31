@@ -2,11 +2,12 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/userModel")
-const { registerUser, loginUser } = require("../controllers/authController");
+const { registerUser, loginUser ,updateUserStatus} = require("../controllers/authController");
 const { auth } = require("../middlewares/authMiddleware");
 
 router.post("/register", auth(["admin"]), registerUser);
 router.post("/login", loginUser);
+router.put("/status/:userId", auth(["admin"]), updateUserStatus);
 
 // Protected Route Example (e.g., Admin-only)
 router.get("/profile", auth(["admin","student", "teacher"]), async(req, res) => {
@@ -32,7 +33,6 @@ router.get("/profile", auth(["admin","student", "teacher"]), async(req, res) => 
 router.get("/admin-data", auth(["admin"]), (req, res) => {
   res.json({ message: "Admin access granted" });
 });
-
 router.get("/teacher-data", auth(["admin","teacher"]), (req, res) => {
   res.json({ message: "Director access granted" });
 });

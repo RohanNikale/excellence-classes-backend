@@ -3,7 +3,6 @@ const { google } = require('googleapis');
 const { PassThrough } = require('stream');
 const path = require('path');
 
-// Use __dirname to get the directory name of the current module
 const keyFilePath = path.join(__dirname, '..', 'config', 'excellence-coaching-centre-03318aed9cbe.json');
 
 const auth = new google.auth.GoogleAuth({
@@ -18,7 +17,7 @@ exports.uploadFile = async (req, res) => {
     const { file } = req;
 
     if (!file) {
-      return res.status(400).json({ message: 'No file uploaded'});
+      return res.status(400).json({ message: 'No file uploaded' });
     }
 
     const fileMetadata = {
@@ -26,13 +25,12 @@ exports.uploadFile = async (req, res) => {
       parents: ['1OP8zMlIACRz9kD1j-61CD7ijmwh5cchL'], // Replace with your Google Drive folder ID
     };
 
-    // Create a readable stream from the buffer
     const bufferStream = new PassThrough();
     bufferStream.end(file.buffer);
 
     const media = {
       mimeType: file.mimetype,
-      body: bufferStream, // Use the buffer stream here
+      body: bufferStream,
     };
 
     const response = await drive.files.create({
@@ -42,7 +40,9 @@ exports.uploadFile = async (req, res) => {
     });
 
     const fileId = response.data.id;
-    const fileLink = `https://drive.google.com/uc?id=${fileId}`;
+
+    // Transform to direct image URL format
+    const fileLink = `https://drive.google.com/uc?export=view&id=${fileId}`;
 
     res.status(201).json({ message: 'File uploaded successfully', fileLink });
   } catch (err) {

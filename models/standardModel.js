@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 
 const standardSchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true }, // e.g., "10th Grade"
-
+  fee: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
 });
 
