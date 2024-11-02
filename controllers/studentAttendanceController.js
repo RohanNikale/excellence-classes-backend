@@ -2,31 +2,60 @@
 const Attendance = require("../models/studentAttendanceModel");
 const User = require("../models/userModel");
 
-// Mark Attendance
-// Mark Attendance
+// Helper function to adjust student's attendance count based on status change
+function adjustStudentAttendanceCounts(student, status, increment) {
+  switch (status) {
+    case "present":
+      student.attendanceCounts.present += increment;
+      break;
+    case "late":
+      student.attendanceCounts.late += increment;
+      break;
+    case "absent":
+      student.attendanceCounts.absent += increment;
+      break;
+    case "Absent(Informed)":
+      student.attendanceCounts["Absent(Informed)"] += increment;
+      break;
+    default:
+      break;
+  }
+}
+
+// Helper function to calculate the score based on attendance counts
+function calculateStudentScore(student) {
+  const presentScore = student.attendanceCounts.present * 1;
+  const lateScore = student.attendanceCounts.late * 0.5;
+  const absentScore = student.attendanceCounts.absent * 0;
+  const informedAbsentScore = student.attendanceCounts["Absent(Informed)"] * 0.75;
+
+  student.score = presentScore + lateScore + absentScore + informedAbsentScore;
+}
+
+// Mark Attendance for a single student
 exports.markAttendance = async (req, res) => {
   const { studentId, status, date } = req.body;
 
   try {
     const student = await User.findById(studentId);
-    if (!student || student.role !== "student" || (student.status !== "active" && student.status !== "re-enrolled")) {
-      return res.status(404).json({ message: "Student not found or not eligible" });
+    if (!student || student.role !== "student" || !["active", "re-enrolled"].includes(student.status)) {
+      return res.status(404).json({ message: "Student not found or inactive" });
     }
 
-    // If a date is provided, use it; otherwise, set to today at midnight
     const attendanceDate = date ? new Date(new Date(date).setHours(0, 0, 0, 0)) : new Date(new Date().setHours(0, 0, 0, 0));
 
-    // Check if attendance for the student on the specified date already exists
     let attendance = await Attendance.findOne({ student: studentId, date: attendanceDate });
 
     if (attendance) {
-      // Update existing attendance status
+      // Adjust attendance count for the previous status
+      adjustStudentAttendanceCounts(student, attendance.status, -1);
+
+      // Update attendance with the new status
       attendance.status = status;
       attendance.markedBy = req.user.id;
       await attendance.save();
-      return res.status(200).json({ message: "Attendance updated successfully", attendance });
     } else {
-      // Create new attendance record
+      // New attendance record
       attendance = new Attendance({
         student: studentId,
         status,
@@ -34,16 +63,24 @@ exports.markAttendance = async (req, res) => {
         date: attendanceDate
       });
       await attendance.save();
-      return res.status(201).json({ message: "Attendance marked successfully", attendance });
     }
+
+    // Adjust attendance count for the new status and calculate the updated score
+    adjustStudentAttendanceCounts(student, status, 1);
+    calculateStudentScore(student);
+    await student.save();
+
+    return res.status(attendance ? 200 : 201).json({
+      message: attendance ? "Attendance updated successfully" : "Attendance marked successfully",
+      attendance
+    });
   } catch (err) {
     console.error("Error marking attendance:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-
-// Mark Bulk Attendance for Multiple Students
+// Mark Bulk Attendance for multiple students
 exports.markBulkAttendance = async (req, res) => {
   const { attendances } = req.body;
 
@@ -54,24 +91,23 @@ exports.markBulkAttendance = async (req, res) => {
   try {
     const bulkOperations = attendances.map(async ({ studentId, status, date }) => {
       const student = await User.findById(studentId);
-      if (!student || student.role !== "student" || (student.status !== "active" && student.status !== "re-enrolled")) {
-        return { studentId, error: "Student not found or not eligible" };
+      if (!student || student.role !== "student" || !["active", "re-enrolled"].includes(student.status)) {
+        return { studentId, error: "Student not found or inactive" };
       }
 
-      // Set attendance date to provided date or default to today at midnight
       const attendanceDate = date ? new Date(new Date(date).setHours(0, 0, 0, 0)) : new Date(new Date().setHours(0, 0, 0, 0));
-
-      // Check if attendance record already exists for specified date
       let attendance = await Attendance.findOne({ student: studentId, date: attendanceDate });
 
       if (attendance) {
-        // Update existing attendance status
+        // Adjust attendance count for the previous status
+        adjustStudentAttendanceCounts(student, attendance.status, -1);
+
+        // Update attendance with the new status
         attendance.status = status;
         attendance.markedBy = req.user.id;
         await attendance.save();
-        return { studentId, message: "Attendance updated" };
       } else {
-        // Create new attendance record
+        // New attendance record
         attendance = new Attendance({
           student: studentId,
           status,
@@ -79,8 +115,14 @@ exports.markBulkAttendance = async (req, res) => {
           date: attendanceDate
         });
         await attendance.save();
-        return { studentId, message: "Attendance marked" };
       }
+
+      // Adjust attendance count for the new status and calculate the updated score
+      adjustStudentAttendanceCounts(student, status, 1);
+      calculateStudentScore(student);
+      await student.save();
+
+      return { studentId, message: attendance ? "Attendance updated" : "Attendance marked" };
     });
 
     const results = await Promise.all(bulkOperations);
@@ -91,111 +133,130 @@ exports.markBulkAttendance = async (req, res) => {
   }
 };
 
-
 // Get All Students Attendance Sorted by Date
 exports.getAllAttendanceSortedByDate = async (req, res) => {
+  const { date } = req.query;
+
+  if (!date) {
+    return res.status(400).json({ message: "Date query parameter is required." });
+  }
+
+  const targetDate = new Date(date);
+  if (isNaN(targetDate.getTime())) {
+    return res.status(400).json({ message: "Invalid date format. Use YYYY-MM-DD format." });
+  }
+
+  // Set start and end times for the date range
+  targetDate.setHours(0, 0, 0, 0);
+  const nextDay = new Date(targetDate);
+  nextDay.setDate(targetDate.getDate() + 1);
 
   try {
-    // Check if the date parameter is provided
-    const { date, batch } = req.query;
-    if (!date) {
-      return res.status(400).json({ message: "Date query parameter is required." });
-    }
-
-    // Parse and validate the date
-    const targetDate = new Date(date);
-    if (isNaN(targetDate.getTime())) {
-      return res.status(400).json({ message: "Invalid date format. Use YYYY-MM-DD format." });
-    }
-
-    // Standardize date to midnight
-    targetDate.setHours(0, 0, 0, 0);
-    const nextDay = new Date(targetDate);
-    nextDay.setDate(targetDate.getDate() + 1);
-
-    // First, retrieve attendance records based on date, limiting the populated fields
-    let attendanceRecords = await Attendance.find({
+    const attendanceRecords = await Attendance.find({
       date: { $gte: targetDate, $lt: nextDay },
-    }).populate({
-      path: 'student',
-      select: 'name batch', // Only fetch name and batch ID from student
-      populate: {
-        path: 'batch', // Populate the batch info
-        select: '_id name' // Only fetch the batch ID and name
-      }
-    });
+    }).populate("student", "name status");
 
-    // If batch parameter is provided, filter attendance records by batch ID
-    if (batch) {
-      attendanceRecords = attendanceRecords.filter(record =>
-        record.student.batch && record.student.batch._id.toString() === batch
-      );
-    }
-
-    // Map to only return the necessary fields, including the status
-    const response = attendanceRecords.map(record => ({
-      studentName: record.student.name,
-      batchId: record.student.batch ? record.student.batch._id : null,
-      batchName: record.student.batch ? record.student.batch.name : null,
-      status: record.status, // Include the status field
-      date: record.date, // Include the date for reference
-    }));
+    // Filter records to include only active or re-enrolled students
+    const response = attendanceRecords
+      .filter(record => record.student && ["active", "re-enrolled"].includes(record.student.status))
+      .map(record => ({
+        studentName: record.student.name,
+        status: record.status,
+        date: record.date,
+      }));
 
     res.status(200).json(response);
   } catch (err) {
-    // Log the error for debugging
-    console.error("Error retrieving attendance by date and batch:", err);
-    res.status(500).json({ message: "Server error. Please try again later." });
+    console.error("Error retrieving student attendance by date:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-
-// Get All Attendance Records - Only for admin and teacher
+// Get All Attendance Records
 exports.getAllAttendance = async (req, res) => {
   try {
-    if (req.user.role !== "admin" && req.user.role !== "teacher") {
-      return res.status(403).json({ message: "Access denied: Admins and teachers only" });
-    }
+    const attendanceRecords = await Attendance.find()
+      .populate("student", "name status") // Include status field in population
+      .sort({ date: -1 });
 
-    const attendanceRecords = await Attendance.find().populate("student", "name").sort({ date: -1 });
-    res.status(200).json(attendanceRecords);
+    // Filter records to include only active or re-enrolled students
+    const response = attendanceRecords
+      .filter(record => record.student.status && ["active", "re-enrolled"].includes(record.student.status));
+
+    res.status(200).json(response);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// Get Attendance by Student ID - Only for authorized user
+// Get Attendance by Student ID
 exports.getAttendanceByStudent = async (req, res) => {
-  const { studentId } = req.params;
+  // Destructure role and user from the request
+  const { role } = req.user; // Assuming req.user is populated with user information
+  const studentId = role === 'admin' || role === 'teacher' ? req.params.studentId : req.user._id;
+
+  // Get page number from query parameters, default to 1
+  const page = parseInt(req.query.page) || 1;
+  const limit = 10; // Set the limit for records per page
 
   try {
-    if (req.user.role === "student" && req.user.id !== studentId) {
-      return res.status(403).json({ message: "Access denied: You can only view your own attendance records." });
-    }
+    // Count total attendance records for pagination
+    const totalRecords = await Attendance.countDocuments({ student: studentId });
+    
+    // Calculate total pages
+    const totalPages = Math.ceil(totalRecords / limit);
+    
+    // Fetch attendance records with pagination
+    const attendanceRecords = await Attendance.find({ student: studentId })
+      .populate("student", "name status") // Include status field in population
+      .sort({ date: -1 })
+      .skip((page - 1) * limit) // Skip records for previous pages
+      .limit(limit); // Limit records to the specified limit
 
-    const attendanceRecords = await Attendance.find({ student: studentId }).populate("student", "name").sort({ date: -1 });
-    res.status(200).json(attendanceRecords);
+    // Filter to include only active or re-enrolled students
+    const filteredRecords = attendanceRecords.filter(record => 
+      record.student.status && ["active", "re-enrolled"].includes(record.student.status)
+    );
+
+    // Send response with attendance records and pagination info
+    res.status(200).json({
+      totalRecords,
+      totalPages,
+      currentPage: page,
+      records: filteredRecords,
+    });
   } catch (err) {
+    console.error(err); // Log the error for debugging
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// Update Attendance - Only for admin and teacher
+
+
+// Update Attendance - Only for admin and certain users
 exports.updateAttendance = async (req, res) => {
   const { attendanceId, status } = req.body;
 
   try {
-    if (req.user.role !== "admin" && req.user.role !== "teacher") {
-      return res.status(403).json({ message: "Access denied: Admins and teachers only" });
-    }
-
-    const attendance = await Attendance.findById(attendanceId);
+    const attendance = await Attendance.findById(attendanceId).populate("student", "status");
     if (!attendance) {
       return res.status(404).json({ message: "Attendance record not found" });
     }
 
+    if (!["active", "re-enrolled"].includes(attendance.student.status)) {
+      return res.status(403).json({ message: "Cannot update attendance for inactive student" });
+    }
+
+    // Adjust attendance count for the previous status
+    adjustStudentAttendanceCounts(attendance.student, attendance.status, -1);
+
     attendance.status = status;
     await attendance.save();
+
+    // Adjust attendance count for the new status and calculate the updated score
+    adjustStudentAttendanceCounts(attendance.student, status, 1);
+    calculateStudentScore(attendance.student);
+    await attendance.student.save();
 
     res.status(200).json({ message: "Attendance updated successfully", attendance });
   } catch (err) {

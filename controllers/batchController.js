@@ -13,13 +13,26 @@ exports.createBatch = async (req, res) => {
 
 // Get all batches
 exports.getAllBatches = async (req, res) => {
+  const { role, teacherBatches } = req.user; // Get role and teacher's batches from req.user
+
   try {
-    const batches = await Batch.find().populate("standard students teachers", "name");
+    let query = {};
+
+    // If the user is a teacher, restrict the batches to those in teacherBatches
+    if (role === "teacher") {
+      query = { _id: { $in: teacherBatches } };
+    }
+
+    // Fetch the batches with optional filtering for teachers
+    const batches = await Batch.find(query).populate("standard", "name subjects");
+
     res.status(200).json(batches);
   } catch (error) {
+    console.error("Error fetching batches:", error);
     res.status(500).json({ error: "Error fetching batches" });
   }
 };
+
 
 // Update a batch
 exports.updateBatch = async (req, res) => {

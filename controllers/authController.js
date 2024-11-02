@@ -1,10 +1,11 @@
 // authController.js
 const User = require("../models/userModel");
 const Batch = require("../models/batchModel");
-const FeePayment = require("../models/FeePaymentModel"); // Import Payment model
+const FeePayment = require("../models/FeePaymentModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const generateUniqueId = require('../middlewares/generateUniqueId')
+const generateUniqueId = require('../middlewares/generateUniqueId');
+
 // Register User
 exports.registerUser = async (req, res) => {
   const { 
@@ -23,38 +24,29 @@ exports.registerUser = async (req, res) => {
       relationshipToGuardian, 
       batch, 
       discount, 
-      paidFee, // New field for initial payment at registration
-      salary, // Salary field for staff
-      salaryType // Salary type (monthly or daily)
+      paidFee, 
+      salary, 
+      salaryType,
+      teacherBatches,
+      subjects // Only for teachers
   } = req.body;
 
   try {
-      // Check if user already exists
       let user = await User.findOne({ email });
       if (user) return res.status(400).json({ message: "User already exists" });
 
-      // Hash the password
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      // Generate unique ID based on role
-      let studentId, teacherId, adminId;
-      if (role === "student") {
-          studentId = await generateUniqueId("student");
-      } else if (role === "teacher") {
-          teacherId = await generateUniqueId("teacher");
-      } else if (role === "admin") {
-          adminId = await generateUniqueId("admin");
-      }
-
-      // Initialize total fee and pending fee
       let totalFee = 0;
       let pendingFee = 0;
 
-      // If the user is a student and batch is provided, fetch the batch
-      if (role === "student" && batch) {
-          const batchDetails = await Batch.findById(batch).populate("standard");
-          if (batchDetails) {
-              if (batchDetails.standard && batchDetails.standard.fee) {
+      // Only generate studentId for students
+      let studentId;
+      if (role === "student") {
+          studentId = await generateUniqueId("student");
+          if (batch) {
+              const batchDetails = await Batch.findById(batch).populate("standard");
+              if (batchDetails?.standard?.fee) {
                   totalFee = batchDetails.standard.fee;
                   pendingFee = totalFee - (discount || 0);
                   if (paidFee && paidFee > 0) {
@@ -64,28 +56,25 @@ exports.registerUser = async (req, res) => {
           }
       }
 
-      // Create the user object with status set to "active"
+      // Prepare user object, conditionally adding fields based on role
       const newUser = new User({
-          name,
-          email,
-          address,
-          password: hashedPassword,
-          profilePic: profileImage,
-          role,
-          status: "active", // Set status to "active" by default
-          personalContactNumber,
-          emergencyContactNumber,
-          dateOfBirth, 
-          gender,
-          batch: role === "student" || role === "teacher" ? batch : undefined,
-          ...(role === "student" && { studentId, totalFee, pendingFee, discount, parentName, parentContactNumber, relationshipToGuardian }),
-          ...((role !== "student") && { 
-              salary, 
-              salaryType,
-              ...(role === "teacher" && { teacherId }), 
-              ...(role === "admin" && { adminId })
-          }),
-      });
+        name,
+        email,
+        address,
+        password: hashedPassword,
+        profilePic: profileImage,
+        role,
+        status: "active",
+        personalContactNumber,
+        emergencyContactNumber,
+        dateOfBirth, 
+        gender,
+        batch: role === "student" ? batch : undefined,
+        teacherBatches: role === "teacher" ? teacherBatches : undefined,
+        ...(role === "student" && { studentId, totalFee, pendingFee, discount, parentName, parentContactNumber, relationshipToGuardian }),
+        ...(role !== "student" && { salary, salaryType }),
+        ...(role === "teacher" && { subjects }) // Add subjects only for teachers
+    });
 
       await newUser.save();
 
@@ -96,10 +85,6 @@ exports.registerUser = async (req, res) => {
               method: "cash",
           });
           await paymentEntry.save();
-      }
-
-      if (role === "student" && batch) {
-          await Batch.findByIdAndUpdate(batch, { $push: { students: newUser._id } });
       }
 
       res.status(201).json({ message: "User registered successfully", user: newUser });
@@ -114,21 +99,19 @@ exports.loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Find user and populate batch and standard fields
     const user = await User.findOne({ email })
       .populate({
         path: "batch",
         populate: { path: "standard" },
-      });
+      })
+      .populate("teacherBatches teacherBatches");
 
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
-    // Check if user status is active or re-enrolled
     if (user.status !== "active" && user.status !== "re-enrolled") {
       return res.status(403).json({ message: "Account not active. Contact admin for assistance." });
     }
 
-    // Verify password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
@@ -145,7 +128,6 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 // Update User Status (Admin Only)
 exports.updateUserStatus = async (req, res) => {

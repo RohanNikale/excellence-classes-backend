@@ -2,6 +2,36 @@
 const StaffAttendance = require("../models/staffAttendanceModel");
 const User = require("../models/userModel");
 
+// Helper function to adjust staff's attendance count based on status change
+function adjustStaffAttendanceCounts(staff, status, increment) {
+  switch (status) {
+    case "present":
+      staff.attendanceCounts.present += increment;
+      break;
+    case "late":
+      staff.attendanceCounts.late += increment;
+      break;
+    case "absent":
+      staff.attendanceCounts.absent += increment;
+      break;
+    case "Absent(Informed)":
+      staff.attendanceCounts["Absent(Informed)"] += increment;
+      break;
+    default:
+      break;
+  }
+}
+
+// Helper function to calculate the score based on attendance counts
+function calculateStaffScore(staff) {
+  const presentScore = staff.attendanceCounts.present * 1;
+  const lateScore = staff.attendanceCounts.late * 0.5;
+  const absentScore = staff.attendanceCounts.absent * 0;
+  const informedAbsentScore = staff.attendanceCounts["Absent(Informed)"] * 0.75;
+
+  staff.score = presentScore + lateScore + absentScore + informedAbsentScore;
+}
+
 // Mark Attendance for a single staff member
 exports.markStaffAttendance = async (req, res) => {
   const { staffId, status, date } = req.body;
@@ -17,11 +47,15 @@ exports.markStaffAttendance = async (req, res) => {
     let attendance = await StaffAttendance.findOne({ staff: staffId, date: attendanceDate });
 
     if (attendance) {
+      // Adjust attendance count for the previous status
+      adjustStaffAttendanceCounts(staff, attendance.status, -1);
+
+      // Update attendance with the new status
       attendance.status = status;
       attendance.markedBy = req.user.id;
       await attendance.save();
-      return res.status(200).json({ message: "Attendance updated successfully", attendance });
     } else {
+      // New attendance record
       attendance = new StaffAttendance({
         staff: staffId,
         status,
@@ -29,14 +63,22 @@ exports.markStaffAttendance = async (req, res) => {
         date: attendanceDate
       });
       await attendance.save();
-      return res.status(201).json({ message: "Attendance marked successfully", attendance });
     }
+
+    // Adjust attendance count for the new status and calculate the updated score
+    adjustStaffAttendanceCounts(staff, status, 1);
+    calculateStaffScore(staff);
+    await staff.save();
+
+    return res.status(attendance ? 200 : 201).json({
+      message: attendance ? "Attendance updated successfully" : "Attendance marked successfully",
+      attendance
+    });
   } catch (err) {
     console.error("Error marking attendance:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 // Mark Bulk Attendance for multiple staff members
 exports.markBulkStaffAttendance = async (req, res) => {
@@ -54,15 +96,18 @@ exports.markBulkStaffAttendance = async (req, res) => {
       }
 
       const attendanceDate = date ? new Date(new Date(date).setHours(0, 0, 0, 0)) : new Date(new Date().setHours(0, 0, 0, 0));
-
       let attendance = await StaffAttendance.findOne({ staff: staffId, date: attendanceDate });
 
       if (attendance) {
+        // Adjust attendance count for the previous status
+        adjustStaffAttendanceCounts(staff, attendance.status, -1);
+
+        // Update attendance with the new status
         attendance.status = status;
         attendance.markedBy = req.user.id;
         await attendance.save();
-        return { staffId, message: "Attendance updated" };
       } else {
+        // New attendance record
         attendance = new StaffAttendance({
           staff: staffId,
           status,
@@ -70,8 +115,14 @@ exports.markBulkStaffAttendance = async (req, res) => {
           date: attendanceDate
         });
         await attendance.save();
-        return { staffId, message: "Attendance marked" };
       }
+
+      // Adjust attendance count for the new status and calculate the updated score
+      adjustStaffAttendanceCounts(staff, status, 1);
+      calculateStaffScore(staff);
+      await staff.save();
+
+      return { staffId, message: attendance ? "Attendance updated" : "Attendance marked" };
     });
 
     const results = await Promise.all(bulkOperations);
@@ -81,7 +132,6 @@ exports.markBulkStaffAttendance = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 // Get All Staff Attendance Sorted by Date
 exports.getAllStaffAttendanceSortedByDate = async (req, res) => {
@@ -96,6 +146,7 @@ exports.getAllStaffAttendanceSortedByDate = async (req, res) => {
     return res.status(400).json({ message: "Invalid date format. Use YYYY-MM-DD format." });
   }
 
+  // Set start and end times for the date range
   targetDate.setHours(0, 0, 0, 0);
   const nextDay = new Date(targetDate);
   nextDay.setDate(targetDate.getDate() + 1);
@@ -103,11 +154,11 @@ exports.getAllStaffAttendanceSortedByDate = async (req, res) => {
   try {
     const attendanceRecords = await StaffAttendance.find({
       date: { $gte: targetDate, $lt: nextDay },
-    }).populate("staff", "name");
+    }).populate("staff", "name status");
 
     // Filter records to include only active or re-enrolled staff members
     const response = attendanceRecords
-      .filter(record => record.staff.status && ["active", "re-enrolled"].includes(record.staff.status))
+      .filter(record => record.staff && ["active", "re-enrolled"].includes(record.staff.status))
       .map(record => ({
         staffName: record.staff.name,
         status: record.status,
@@ -120,7 +171,6 @@ exports.getAllStaffAttendanceSortedByDate = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 // Get All Staff Attendance Records
 exports.getAllStaffAttendance = async (req, res) => {
@@ -139,21 +189,39 @@ exports.getAllStaffAttendance = async (req, res) => {
   }
 };
 
-
 // Get Attendance by Staff ID
+// Assuming a pagination mechanism with page and limit query parameters
 exports.getStaffAttendanceById = async (req, res) => {
   const { staffId } = req.params;
+  const page = parseInt(req.query.page) || 1; // Get the page number from query params
+  const limit = 10; // Define the limit for records per page
+  const skip = (page - 1) * limit; // Calculate the number of records to skip for pagination
 
   try {
+    // Fetch attendance records with pagination
     const attendanceRecords = await StaffAttendance.find({ staff: staffId })
       .populate("staff", "name status") // Include status field in population
-      .sort({ date: -1 });
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limit);
 
     // Filter to include only active or re-enrolled staff members
-    const filteredRecords = attendanceRecords.filter(record => record.staff.status && ["active", "re-enrolled"].includes(record.staff.status));
+    const filteredRecords = attendanceRecords.filter(record => 
+      record.staff.status && ["active", "re-enrolled"].includes(record.staff.status)
+    );
 
-    res.status(200).json(filteredRecords);
+    // Get total count for pagination purposes
+    const totalCount = await StaffAttendance.countDocuments({ staff: staffId });
+    const totalPages = Math.ceil(totalCount / limit);
+
+    // Send the filtered records along with pagination info
+    res.status(200).json({
+      records: filteredRecords,
+      totalPages, // Total number of pages available
+      currentPage: page, // Current page
+    });
   } catch (err) {
+    console.error(err); // Log the error for debugging
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -173,8 +241,16 @@ exports.updateStaffAttendance = async (req, res) => {
       return res.status(403).json({ message: "Cannot update attendance for inactive staff" });
     }
 
+    // Adjust attendance count for the previous status
+    adjustStaffAttendanceCounts(attendance.staff, attendance.status, -1);
+
     attendance.status = status;
     await attendance.save();
+
+    // Adjust attendance count for the new status and calculate the updated score
+    adjustStaffAttendanceCounts(attendance.staff, status, 1);
+    calculateStaffScore(attendance.staff);
+    await attendance.staff.save();
 
     res.status(200).json({ message: "Attendance updated successfully", attendance });
   } catch (err) {

@@ -26,7 +26,7 @@ router.post("/staff/mark", auth(["admin"]), markStaffAttendance);
 router.post("/staff/bulk-mark", auth(["admin"]), markBulkStaffAttendance);
 router.get("/staff/all-by-date", auth(["admin"]), getAllStaffAttendanceSortedByDate);
 router.get("/staff/all", auth(["admin"]), getAllStaffAttendance);
-router.get("/staff/:staffId", auth(["admin"]), getStaffAttendanceById);
+router.get("/staff/:staffId", auth(["teacher","admin"]), getStaffAttendanceById);
 router.put("/staff/update", auth(["admin"]), updateStaffAttendance);
 
 module.exports = router;
