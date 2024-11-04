@@ -27,6 +27,7 @@ exports.registerUser = async (req, res) => {
       paidFee, 
       salary, 
       salaryType,
+      paymentMethod,
       teacherBatches,
       subjects // Only for teachers
   } = req.body;
@@ -78,11 +79,20 @@ exports.registerUser = async (req, res) => {
 
       await newUser.save();
 
+      // Create a fee payment record for the student if they have paid a fee
       if (role === "student" && paidFee > 0) {
+          const transactionId = await generateUniqueId("transaction"); // Generate unique transaction ID
+          
           const paymentEntry = new FeePayment({
               student: newUser._id,
               amount: paidFee,
-              method: "cash",
+              method: paymentMethod, // Assuming cash for manual payments; update as needed
+              transactionId: transactionId,
+              status: "completed", // Assuming completed status for initial registration fee
+              currency: "INR", // Default currency
+              createdBy: req.user ? req.user._id : null, // Store the user who created the payment
+              memo: "Advance Fee Payment",
+              paymentGateway: "manual" // Mark as manual payment since added by user
           });
           await paymentEntry.save();
       }
@@ -93,6 +103,7 @@ exports.registerUser = async (req, res) => {
       res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // Login User
 exports.loginUser = async (req, res) => {

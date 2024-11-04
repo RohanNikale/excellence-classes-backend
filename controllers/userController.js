@@ -285,7 +285,7 @@ exports.getAllUsers = async (req, res) => {
 
       // Apply status filter if it is not "all"
       if (statusFilter && statusFilter !== "all") {
-          if (["active", "pending", "completed", "re-enrolled", "absconded", "postponed", "suspended", "withdrawn"].includes(statusFilter)) {
+          if (["active",'resigned', "pending", "completed", "re-enrolled", "absconded", "postponed", "suspended", "withdrawn"].includes(statusFilter)) {
               query.status = statusFilter;
           } else {
               return res.status(400).json({ message: "Invalid status query" });
@@ -334,30 +334,61 @@ exports.getAllUsers = async (req, res) => {
 // Update User Profile (Admin Only)
 exports.updateUserProfile = async (req, res) => {
   const { userId } = req.params;
-  const { name, email, password, role,address } = req.body;
-  
+  const {
+    name,
+    email,
+    password,
+    role,
+    address,
+    profilePic,
+    personalContactNumber,
+    emergencyContactNumber,
+    dateOfBirth,
+    gender,
+    parentName,
+    parentContactNumber,
+    relationshipToGuardian,
+    teacherBatches,
+    subjects,
+    salary,
+    salaryType
+  } = req.body;
+
   try {
     if (req.user.role !== "admin") {
       return res.status(403).json({ message: "Access denied: Admins only" });
     }
-    
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    
+
     if (name) user.name = name;
     if (email) user.email = email;
     if (address) user.address = address;
     if (password) user.password = await bcrypt.hash(password, 10);
-    if (role) user.role = role;
+    if (profilePic) user.profilePic = profilePic;
+    if (personalContactNumber) user.personalContactNumber = personalContactNumber;
+    if (emergencyContactNumber) user.emergencyContactNumber = emergencyContactNumber;
+    if (dateOfBirth) user.dateOfBirth = dateOfBirth;
+    if (gender) user.gender = gender;
+    if (parentName) user.parentName = parentName;
+    if (parentContactNumber) user.parentContactNumber = parentContactNumber;
+    if (relationshipToGuardian) user.relationshipToGuardian = relationshipToGuardian;
+    if (teacherBatches) user.teacherBatches = teacherBatches;
+    if (subjects) user.subjects = subjects;
+    if (salary) user.salary = salary;
+    if (salaryType) user.salaryType = salaryType;
 
     await user.save();
     res.status(200).json({ message: "Profile updated successfully", user });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // controllers/userController.js
 exports.deleteUserProfile = async (req, res) => {

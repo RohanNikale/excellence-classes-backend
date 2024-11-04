@@ -191,7 +191,6 @@ exports.getAllAttendance = async (req, res) => {
 
 // Get Attendance by Student ID
 exports.getAttendanceByStudent = async (req, res) => {
-  // Destructure role and user from the request
   const { role } = req.user; // Assuming req.user is populated with user information
   const studentId = role === 'admin' || role === 'teacher' ? req.params.studentId : req.user._id;
 
@@ -199,16 +198,36 @@ exports.getAttendanceByStudent = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 10; // Set the limit for records per page
 
+  // Get date range from query parameters
+  const { from, to } = req.query;
+  const dateFilter = {};
+
+  // If 'from' date is provided, add it to the dateFilter
+  if (from) {
+    dateFilter.$gte = new Date(from);
+  }
+  // If 'to' date is provided, add it to the dateFilter
+  if (to) {
+    dateFilter.$lte = new Date(to);
+  }
+
   try {
-    // Count total attendance records for pagination
-    const totalRecords = await Attendance.countDocuments({ student: studentId });
+    // Count total attendance records for pagination, applying date filter if provided
+    const totalRecords = await Attendance.countDocuments({ 
+      student: studentId, 
+      ...(Object.keys(dateFilter).length && { date: dateFilter })
+    });
     
     // Calculate total pages
     const totalPages = Math.ceil(totalRecords / limit);
     
-    // Fetch attendance records with pagination
-    const attendanceRecords = await Attendance.find({ student: studentId })
+    // Fetch attendance records with pagination and date filter
+    const attendanceRecords = await Attendance.find({ 
+        student: studentId, 
+        ...(Object.keys(dateFilter).length && { date: dateFilter })
+      })
       .populate("student", "name status") // Include status field in population
+      .populate("markedBy", "name role") // Populate markedBy field to include name
       .sort({ date: -1 })
       .skip((page - 1) * limit) // Skip records for previous pages
       .limit(limit); // Limit records to the specified limit

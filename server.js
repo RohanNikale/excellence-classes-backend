@@ -8,6 +8,7 @@ const userRoutes = require("./routes/userRoutes");
 const batchRoutes = require("./routes/batchRoutes");
 const standardRoutes = require("./routes/standardRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const onlineMCQTestRoutes = require("./routes/onlineMCQtestRoutes");
 require("dotenv").config();
 
 const app = express();
@@ -23,6 +24,7 @@ app.get('/', (req, res) => {
 
 // Routes
 app.use("/api/payments", paymentRoutes);
+app.use("/api/mcqtest",onlineMCQTestRoutes)
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);

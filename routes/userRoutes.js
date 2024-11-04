@@ -52,6 +52,5 @@ router.get("/staff/profiles", auth(["admin"]), getAllUsersExceptStudents);
 // Search users by name, email, batch, studentId, and role (Admin only)
 router.get("/search-users", auth(["admin","teacher"]), searchUsers);  
 
-// =============================================================== //
 
 module.exports = router;

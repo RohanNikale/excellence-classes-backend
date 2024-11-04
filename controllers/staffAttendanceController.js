@@ -197,10 +197,27 @@ exports.getStaffAttendanceById = async (req, res) => {
   const limit = 10; // Define the limit for records per page
   const skip = (page - 1) * limit; // Calculate the number of records to skip for pagination
 
+  // Get date range from query parameters
+  const { from, to } = req.query;
+  const dateFilter = {};
+
+  // If 'from' date is provided, add it to the dateFilter
+  if (from) {
+    dateFilter.$gte = new Date(from);
+  }
+  // If 'to' date is provided, add it to the dateFilter
+  if (to) {
+    dateFilter.$lte = new Date(to);
+  }
+
   try {
-    // Fetch attendance records with pagination
-    const attendanceRecords = await StaffAttendance.find({ staff: staffId })
+    // Fetch attendance records with pagination and date filter
+    const attendanceRecords = await StaffAttendance.find({
+        staff: staffId,
+        ...(Object.keys(dateFilter).length && { date: dateFilter }) // Apply date filter if present
+      })
       .populate("staff", "name status") // Include status field in population
+      .populate("markedBy", "name role") // Populate markedBy field with name and role
       .sort({ date: -1 })
       .skip(skip)
       .limit(limit);
@@ -210,8 +227,12 @@ exports.getStaffAttendanceById = async (req, res) => {
       record.staff.status && ["active", "re-enrolled"].includes(record.staff.status)
     );
 
-    // Get total count for pagination purposes
-    const totalCount = await StaffAttendance.countDocuments({ staff: staffId });
+    // Get total count for pagination purposes, applying date filter if provided
+    const totalCount = await StaffAttendance.countDocuments({ 
+      staff: staffId,
+      ...(Object.keys(dateFilter).length && { date: dateFilter })
+    });
+    
     const totalPages = Math.ceil(totalCount / limit);
 
     // Send the filtered records along with pagination info

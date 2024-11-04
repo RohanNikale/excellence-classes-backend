@@ -34,10 +34,10 @@ const userSchema = new mongoose.Schema({
 
   // Teacher-specific fields
   teacherBatches: [{ type: mongoose.Schema.Types.ObjectId, ref: "Batch" }],
-  subjects: { type: [String], required: function() { return this.role === 'teacher'; } },
+  subjects: { type: String, required: function() { return this.role === 'teacher'; } },
 
   // Enrollment status
-  status: { type: String, enum: ["active", "absconded", "completed", "re-enrolled", "pending", "postponed", "suspended", "withdrawn"], default: "active" },
+  status: { type: String, enum: ["active",'resigned', "absconded", "completed", "re-enrolled", "pending", "postponed", "suspended", "withdrawn"], default: "active" },
 
   // Attendance tracking
   attendanceCounts: {
