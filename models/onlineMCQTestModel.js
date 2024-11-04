@@ -19,3 +19,4 @@ const OnlineMCQTestSchema = new mongoose.Schema({
 const OnlineMCQTest = mongoose.model('OnlineMCQTest', OnlineMCQTestSchema);
 
 module.exports = OnlineMCQTest;
+    

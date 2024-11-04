@@ -10,6 +10,6 @@ router.post('/tests/createMCQTest', auth(['admin','teacher']), onlineMCQTestCont
 router.put('/tests/:id', auth(['admin']), onlineMCQTestController.updateTest); // Update a test by ID
 router.delete('/tests/:id', auth(['admin']), onlineMCQTestController.deleteTest); // Delete a test by ID
 router.get('/tests', auth(['admin']), onlineMCQTestController.getAllTests); // Get all tests
-router.get('/tests/:id', auth(['admin']), onlineMCQTestController.getTestById); // Get a test by ID
+router.get('/tests/:id', auth(['admin','student','teacher']), onlineMCQTestController.getTestById); // Get a test by ID
 
 module.exports = router;

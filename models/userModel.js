@@ -34,7 +34,7 @@ const userSchema = new mongoose.Schema({
 
   // Teacher-specific fields
   teacherBatches: [{ type: mongoose.Schema.Types.ObjectId, ref: "Batch" }],
-  subjects: { type: String, required: function() { return this.role === 'teacher'; } },
+  subjects: { type: [String], required: function() { return this.role === 'teacher'; } },
 
   // Enrollment status
   status: { type: String, enum: ["active",'resigned', "absconded", "completed", "re-enrolled", "pending", "postponed", "suspended", "withdrawn"], default: "active" },
@@ -46,7 +46,7 @@ const userSchema = new mongoose.Schema({
     late: { type: Number, default: 0 },
     "Absent(Informed)": { type: Number, default: 0 }  // Updated field name as requested
   },
-  attendancePercentage: { type: Number, default: 0 },
+  testScroe: { type: Number, default: 0 },
 
   // Score tracking
   score: { type: Number, default: 0 },

@@ -9,6 +9,7 @@ const batchRoutes = require("./routes/batchRoutes");
 const standardRoutes = require("./routes/standardRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const onlineMCQTestRoutes = require("./routes/onlineMCQtestRoutes");
+const studentMarksRoutes = require("./routes/studentMarksRoutes");
 require("dotenv").config();
 
 const app = express();
@@ -30,6 +31,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/standard/batch", batchRoutes);
 app.use("/api/standard", standardRoutes);
+app.use("/api/studentmarks", studentMarksRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
