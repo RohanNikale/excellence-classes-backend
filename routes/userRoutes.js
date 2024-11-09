@@ -12,6 +12,7 @@ const {
     getAllUsersExceptStudents,
     getFeesByBatch,
     getUserBatches,
+    getTopScoreStudents,
     searchUsers  // Import the searchUsers controller
 } = require("../controllers/userController");
 const { uploadFile } = require("../controllers/fileController");
@@ -52,5 +53,7 @@ router.get("/staff/profiles", auth(["admin"]), getAllUsersExceptStudents);
 // Search users by name, email, batch, studentId, and role (Admin only)
 router.get("/search-users", auth(["admin","teacher"]), searchUsers);  
 
+// Route to get top score students with optional batch filter and pagination
+router.get("/top-scorers",auth(["admin","teacher",'student']), getTopScoreStudents);
 
 module.exports = router;

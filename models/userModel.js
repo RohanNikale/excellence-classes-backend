@@ -46,10 +46,10 @@ const userSchema = new mongoose.Schema({
     late: { type: Number, default: 0 },
     "Absent(Informed)": { type: Number, default: 0 }  // Updated field name as requested
   },
-  testScroe: { type: Number, default: 0 },
+  testScore: { type: Number, default: 0 },
 
   // Score tracking
-  score: { type: Number, default: 0 },
+  attendanceScore: { type: Number, default: 0 },
 
   createdAt: { type: Date, default: Date.now }
 });

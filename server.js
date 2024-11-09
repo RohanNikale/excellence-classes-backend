@@ -9,6 +9,7 @@ const batchRoutes = require("./routes/batchRoutes");
 const standardRoutes = require("./routes/standardRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const onlineMCQTestRoutes = require("./routes/onlineMCQtestRoutes");
+const offlineTestRoutes = require("./routes/offlineTestRoutes");
 const studentMarksRoutes = require("./routes/studentMarksRoutes");
 require("dotenv").config();
 
@@ -26,6 +27,7 @@ app.get('/', (req, res) => {
 // Routes
 app.use("/api/payments", paymentRoutes);
 app.use("/api/mcqtest",onlineMCQTestRoutes)
+app.use("/api/offline",offlineTestRoutes)
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/auth", authRoutes);

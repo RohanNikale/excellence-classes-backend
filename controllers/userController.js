@@ -4,6 +4,69 @@ const bcrypt = require("bcryptjs");
 
 
 
+exports.getTopScoreStudents = async (req, res) => {
+  try {
+    const { batchId, page = 1, limit = 10 } = req.query;
+    // Define the base query for finding top score students
+    let query;
+    if (req.user.role === 'student') {
+      if (req.user.batch !== undefined) {
+        query = {
+          role: "student",
+          status: { $in: ["active", "re-enrolled"] } // Include only active or re-enrolled students
+        };
+        query.batch = req.user.batch;
+      }
+    } else {
+      query = {
+        role: "student",
+        status: { $in: ["active", "re-enrolled"] } // Include only active or re-enrolled students
+      };
+      if (batchId) {
+        query.batch = batchId;
+      }
+    }
+
+    // Fetch students, sorting by the combined score (testScore + attendanceScore)
+    const [students, totalStudents] = await Promise.all([
+      User.find(query)
+        .select("name studentId batch testScore attendanceScore") // Select fields to return
+        .populate("batch", "name") // Populate batch name if available
+        .skip((page - 1) * limit)
+        .limit(parseInt(limit))
+        .lean(), // Use .lean() to get plain JavaScript objects (no mongoose document overhead)
+      User.countDocuments(query) // Count total number of students for pagination
+    ]);
+
+    // Add combined score and sort by it
+    const studentsWithCombinedScore = students.map(student => {
+      // Default testScore and attendanceScore to 0 if they are undefined or null
+      const testScore = student.testScore || 0;
+      const attendanceScore = student.attendanceScore || 0;
+      const combinedScore = testScore + attendanceScore;
+      return { ...student, combinedScore };
+    });
+
+    // Sort by combined score in descending order
+    studentsWithCombinedScore.sort((a, b) => b.combinedScore - a.combinedScore);
+
+    // Calculate total pages
+    const totalPages = Math.ceil(totalStudents / limit);
+
+    res.status(200).json({
+      students: studentsWithCombinedScore,
+      totalStudents,
+      totalPages,
+      currentPage: parseInt(page),
+    });
+  } catch (err) {
+    console.error("Error fetching top score students:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+
 // Get All Users Except Students (Admin Only)
 exports.getAllUsersExceptStudents = async (req, res) => {
   try {

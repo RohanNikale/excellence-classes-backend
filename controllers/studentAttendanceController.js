@@ -29,7 +29,7 @@ function calculateStudentScore(student) {
   const absentScore = student.attendanceCounts.absent * 0;
   const informedAbsentScore = student.attendanceCounts["Absent(Informed)"] * 0.75;
 
-  student.score = presentScore + lateScore + absentScore + informedAbsentScore;
+  student.attendanceScore = presentScore + lateScore + absentScore + informedAbsentScore;
 }
 
 // Mark Attendance for a single student

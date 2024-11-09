@@ -29,7 +29,7 @@ function calculateStaffScore(staff) {
   const absentScore = staff.attendanceCounts.absent * 0;
   const informedAbsentScore = staff.attendanceCounts["Absent(Informed)"] * 0.75;
 
-  staff.score = presentScore + lateScore + absentScore + informedAbsentScore;
+  staff.attendanceScore = presentScore + lateScore + absentScore + informedAbsentScore;
 }
 
 // Mark Attendance for a single staff member
