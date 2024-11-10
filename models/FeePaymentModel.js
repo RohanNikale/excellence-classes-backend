@@ -7,7 +7,7 @@ const FeePaymentSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
   method: {
     type: String,
-    enum: ["cash", "card", "bank_transfer", "UPI"],
+    enum: ["cash", "card", "bank_transfer", "UPI","razorpay"],
     required: true
   },
   transactionId: { type: String, required: true, unique: true }, // Ensure transactionId is unique
@@ -20,7 +20,7 @@ const FeePaymentSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // Added for manual payments
   updatedAt: { type: Date, default: Date.now },
   memo: { type: String }, // Added memo field for additional notes
-  paymentGateway: { type: String, enum: ["manual", "paymentGateway"], required: true } // Changed to paymentGateway
+  paymentGateway: { type: String, enum: ["manual", "razorpay"], required: true } // Changed to paymentGateway
 });
 
 const FeePayment = mongoose.model("Payment", FeePaymentSchema);

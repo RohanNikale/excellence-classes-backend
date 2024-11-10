@@ -1,3 +1,4 @@
+require("dotenv").config();
 // server.js
 const express = require("express");
 const cors = require("cors");
@@ -11,7 +12,8 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const onlineMCQTestRoutes = require("./routes/onlineMCQtestRoutes");
 const offlineTestRoutes = require("./routes/offlineTestRoutes");
 const studentMarksRoutes = require("./routes/studentMarksRoutes");
-require("dotenv").config();
+const razorpayRoutes=require('./routes/razorpayRoutes')
+const path = require('path');
 
 const app = express();
 connectDB();
@@ -19,10 +21,6 @@ connectDB();
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-app.get('/', (req, res) => {
-    res.send('Hello World!');
-});
 
 // Routes
 app.use("/api/payments", paymentRoutes);
@@ -34,6 +32,11 @@ app.use("/api/auth", authRoutes);
 app.use("/api/standard/batch", batchRoutes);
 app.use("/api/standard", standardRoutes);
 app.use("/api/studentmarks", studentMarksRoutes);
+app.use("/api/online/payment", razorpayRoutes);
+app.use(express.static(path.join(__dirname, 'build')));
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

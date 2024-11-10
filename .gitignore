@@ -25,3 +25,4 @@ coverage
 dist/
 tmp/
 config/excellence-coaching-centre-03318aed9cbe.json
+.vercel
