@@ -9,48 +9,57 @@ const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 exports.createOrder = async (req, res) => {
-    try {
-        const { amount, currency, method, memo } = req.body;
+  try {
+      const { amount, currency, method, memo } = req.body;
+      const pendingFee = req.user.pendingFee;
 
-        // Get the student's pending fee from req.user
-        const pendingFee = req.user.pendingFee;
+      console.log("Order creation request:", req.body);
+      console.log("Environment Variables:", process.env.RAZORPAY_KEY_ID, process.env.RAZORPAY_KEY_SECRET);
 
-        // Check if the requested amount exceeds the pending fee
-        if (amount > pendingFee) {
-            return res.status(400).json({
-                success: false,
-                message: `The requested amount exceeds the pending fee. Your pending fee is ₹${pendingFee}.`,
-            });
-        }
+      if (amount > pendingFee) {
+          console.log("Amount exceeds pending fee.");
+          return res.status(400).json({
+              success: false,
+              message: `The requested amount exceeds the pending fee. Your pending fee is ₹${pendingFee}.`,
+          });
+      }
 
-        const options = {
-            amount: amount * 100, // Convert to smallest currency unit (paise for INR)
-            currency: currency || "INR",
-            receipt: `rcpt_${Date.now()}`,
-            payment_capture: 1,
-        };
+      const options = {
+          amount: amount * 100, // Ensure amount is in paise
+          currency: currency || "INR",
+          receipt: `rcpt_${Date.now()}`,
+          payment_capture: 1,
+      };
 
-        // Create an order in Razorpay
-        const order = await razorpay.orders.create(options);
+      console.log("Creating order with options:", options);
 
-        // Store order in FeePayment model
-        const paymentData = {
-            student: req.user._id,
-            amount,
-            date: new Date(),
-            method,
-            transactionId: order.id,
-            status: "pending",
-            currency: options.currency,
-            memo,
-            paymentGateway: "razorpay",
-        };
+      const order = await razorpay.orders.create(options);
 
-        const feePayment = await FeePayment.create(paymentData);
-        res.json({ success: true, order, feePayment });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
+      if (!order) {
+          console.error("Failed to create Razorpay order.");
+          return res.status(500).json({ success: false, message: "Failed to create Razorpay order." });
+      }
+
+      const paymentData = {
+          student: req.user._id,
+          amount,
+          date: new Date(),
+          method,
+          transactionId: order.id,
+          status: "pending",
+          currency: options.currency,
+          memo,
+          paymentGateway: "razorpay",
+      };
+
+      const feePayment = await FeePayment.create(paymentData);
+      console.log("Order created successfully:", order);
+
+      res.json({ success: true, order, feePayment });
+  } catch (error) {
+      console.error("Error in createOrder:", error.message);
+      res.status(500).json({ success: false, error: error.message });
+  }
 };
 
 
