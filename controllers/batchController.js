@@ -33,7 +33,6 @@ exports.getAllBatches = async (req, res) => {
   }
 };
 
-
 // Update a batch
 exports.updateBatch = async (req, res) => {
   try {

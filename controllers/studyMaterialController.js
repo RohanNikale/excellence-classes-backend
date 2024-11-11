@@ -1,0 +1,119 @@
+const express = require('express');
+const StudyMaterial = require('../models/studyMaterialModel');
+
+exports.createStudyMaterial = async (req, res) => {
+  try {
+    const studyMaterial = new StudyMaterial({
+      title: req.body.title,
+      description: req.body.description,
+      subject: req.body.subject,
+      batch: req.body.batch, 
+      materialType: req.body.materialType,
+      filePath: req.body.materialType === 'YT-Videos' ? '' : req.body.fileLink, 
+      ytVideo: req.body.materialType === 'YT-Videos' ? req.body.ytVideo : '',
+      fileType: req.body.fileType,
+      uploadedBy: req.user._id,
+    });
+    await studyMaterial.save();
+    res.status(201).send({ message: 'Study material uploaded successfully!' });
+  } catch (error) {
+    res.status(400).send({ message: error.message });
+  }
+};
+
+exports.getAllStudyMaterials = async (req, res) => {
+  try {
+    const { materialType } = req.query;
+    let { batch } = req.params;
+
+    // If the user is a student, use batch ID from req.user.batch
+    if (req.user.role === 'student') {
+      batch = req.user.batch;
+    }
+
+    // Ensure batch ID is provided
+    if (!batch) {
+      return res.status(400).send({ message: 'Batch ID is required.' });
+    }
+
+    // Build the filter object
+    const filter = { batch };
+
+    // Add materialType filter if provided
+    if (materialType) {
+      filter.materialType = materialType;
+    }
+
+    // Fetch study materials with the applied filters
+    const studyMaterials = await StudyMaterial.find(filter).populate('uploadedBy', 'batch');
+
+    // If no study materials are found, return a 404
+    if (!studyMaterials.length) {
+      return res.status(404).send({ message: 'No study materials found for the given filters.' });
+    }
+
+    res.status(200).send(studyMaterials);
+  } catch (error) {
+    console.error('Error fetching study materials:', error.stack || error);
+    res.status(500).send({ message: 'An error occurred while fetching study materials. Please try again later.' });
+  }
+};
+
+
+exports.getStudyMaterialById = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const studyMaterial = await StudyMaterial.findById(id).populate('uploadedBy', 'batch');
+    if (!studyMaterial) {
+      return res.status(404).send({ message: 'Study material not found!' });
+    }
+    res.status(200).send(studyMaterial);
+  } catch (error) {
+    res.status(400).send({ message: error.message });
+  }
+};
+
+exports.updateStudyMaterial = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const studyMaterial = await StudyMaterial.findByIdAndUpdate(id, req.body, {
+      new: true,
+    });
+    if (!studyMaterial) {
+      return res.status(404).send({ message: 'Study material not found!' });
+    }
+    res.status(200).send(studyMaterial);
+  } catch (error) {
+    res.status(400).send({ message: error.message });
+  }
+};
+
+exports.deleteStudyMaterial = async (req, res) => {
+  try {
+    const id = req.params.id;
+    await StudyMaterial.findByIdAndDelete(id);
+    res.status(200).send({ message: 'Study material deleted successfully!' });
+  } catch (error) {
+    res.status(400).send({ message: error.message });
+  }
+};
+
+exports.getStudyMaterialsBySubject = async (req, res) => {
+  try {
+    const subject = req.params.subject;
+    const studyMaterials = await StudyMaterial.find({ subject }).populate('uploadedBy', 'batch');
+    res.status(200).send(studyMaterials);
+  } catch (error) {
+    res.status(400).send({ message: error.message });
+  }
+};
+
+exports.getStudyMaterialsByBatch = async (req, res) => {
+  try {
+    const batchId = req.params.batchId;
+    const studyMaterials = await StudyMaterial.find({ batch: batchId }).populate('uploadedBy', 'batch');
+    res.status(200).send(studyMaterials);
+  } catch (error) {
+    res.status(400).send({ message: error.message });
+  }
+};

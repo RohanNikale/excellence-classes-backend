@@ -5,7 +5,7 @@ const { auth } = require("../middlewares/authMiddleware");
 
 // Apply the `auth` middleware to ensure only authorized users can access these routes
 router.post("/", auth(["admin"]), batchController.createBatch);         // Only admins can create batches
-router.get("/", auth(["admin", "teacher"]), batchController.getAllBatches); // Admins and teachers can view batches
+router.get("/", auth(["admin","student", "teacher"]), batchController.getAllBatches); // Admins and teachers can view batches
 router.put("/:id", auth(["admin"]), batchController.updateBatch);       // Only admins can update batches
 router.delete("/:id", auth(["admin"]), batchController.deleteBatch);    // Only admins can delete batches
 

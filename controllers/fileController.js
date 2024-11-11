@@ -33,6 +33,7 @@ exports.uploadFile = async (req, res) => {
       body: bufferStream,
     };
 
+    // Upload the file to Google Drive
     const response = await drive.files.create({
       requestBody: fileMetadata,
       media: media,
@@ -41,8 +42,17 @@ exports.uploadFile = async (req, res) => {
 
     const fileId = response.data.id;
 
-    // Transform to direct image URL format
-    const fileLink = `https://drive.google.com/uc?export=view&id=${fileId}`;
+    // Set file permissions to "Anyone with the link can view"
+    await drive.permissions.create({
+      fileId: fileId,
+      requestBody: {
+        role: 'reader',
+        type: 'anyone',
+      },
+    });
+
+    // Generate a link that displays the file in a web view
+    const fileLink = `https://drive.google.com/file/d/${fileId}/view`;
 
     res.status(201).json({ message: 'File uploaded successfully', fileLink });
   } catch (err) {
