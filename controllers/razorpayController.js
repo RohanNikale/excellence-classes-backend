@@ -13,8 +13,6 @@ exports.createOrder = async (req, res) => {
       const { amount, currency, method, memo } = req.body;
       const pendingFee = req.user.pendingFee;
 
-      console.log("Order creation request:", req.body);
-      console.log("Environment Variables:", process.env.RAZORPAY_KEY_ID, process.env.RAZORPAY_KEY_SECRET);
 
       if (amount > pendingFee) {
           console.log("Amount exceeds pending fee.");
