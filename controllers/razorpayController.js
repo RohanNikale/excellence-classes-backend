@@ -15,7 +15,6 @@ exports.createOrder = async (req, res) => {
 
 
       if (amount > pendingFee) {
-          console.log("Amount exceeds pending fee.");
           return res.status(400).json({
               success: false,
               message: `The requested amount exceeds the pending fee. Your pending fee is ₹${pendingFee}.`,
@@ -29,7 +28,6 @@ exports.createOrder = async (req, res) => {
           payment_capture: 1,
       };
 
-      console.log("Creating order with options:", options);
 
       const order = await razorpay.orders.create(options);
 
@@ -51,7 +49,6 @@ exports.createOrder = async (req, res) => {
       };
 
       const feePayment = await FeePayment.create(paymentData);
-      console.log("Order created successfully:", order);
 
       res.json({ success: true, order, feePayment });
   } catch (error) {

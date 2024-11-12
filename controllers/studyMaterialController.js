@@ -7,9 +7,9 @@ exports.createStudyMaterial = async (req, res) => {
       title: req.body.title,
       description: req.body.description,
       subject: req.body.subject,
-      batch: req.body.batch, 
+      batch: req.body.batch,
       materialType: req.body.materialType,
-      filePath: req.body.materialType === 'YT-Videos' ? '' : req.body.fileLink, 
+      filePath: req.body.materialType === 'YT-Videos' ? '' : req.body.fileLink,
       ytVideo: req.body.materialType === 'YT-Videos' ? req.body.ytVideo : '',
       fileType: req.body.fileType,
       uploadedBy: req.user._id,
@@ -21,23 +21,23 @@ exports.createStudyMaterial = async (req, res) => {
   }
 };
 
+// Controller: getAllStudyMaterials
 exports.getAllStudyMaterials = async (req, res) => {
   try {
     const { materialType } = req.query;
-    let { batch } = req.params;
+    let filter = {};
 
     // If the user is a student, use batch ID from req.user.batch
     if (req.user.role === 'student') {
-      batch = req.user.batch;
+      filter.batch = req.user.batch;
+    } else {
+      // For non-student roles, require batch ID from the request params
+      const { batch } = req.params;
+      if (!batch) {
+        return res.status(400).send({ message: 'Batch ID is required for non-student roles.' });
+      }
+      filter.batch = batch;
     }
-
-    // Ensure batch ID is provided
-    if (!batch) {
-      return res.status(400).send({ message: 'Batch ID is required.' });
-    }
-
-    // Build the filter object
-    const filter = { batch };
 
     // Add materialType filter if provided
     if (materialType) {
@@ -47,9 +47,9 @@ exports.getAllStudyMaterials = async (req, res) => {
     // Fetch study materials with the applied filters
     const studyMaterials = await StudyMaterial.find(filter).populate('uploadedBy', 'batch');
 
-    // If no study materials are found, return a 404
-    if (!studyMaterials.length) {
-      return res.status(404).send({ message: 'No study materials found for the given filters.' });
+    // Check if any study materials are found
+    if (!studyMaterials || studyMaterials.length === 0) {
+      return res.status(200).send([]);
     }
 
     res.status(200).send(studyMaterials);
@@ -58,6 +58,7 @@ exports.getAllStudyMaterials = async (req, res) => {
     res.status(500).send({ message: 'An error occurred while fetching study materials. Please try again later.' });
   }
 };
+
 
 
 exports.getStudyMaterialById = async (req, res) => {
