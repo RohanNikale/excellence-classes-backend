@@ -91,13 +91,29 @@ exports.updateStudyMaterial = async (req, res) => {
 
 exports.deleteStudyMaterial = async (req, res) => {
   try {
+    // Check if the user is a teacher
+    if (req.user.role === 'teacher') {
+      let material = await StudyMaterial.findById(req.params.id);
+
+      // Check if the teacher is the one who uploaded the material
+      if (material.uploadedBy.toString() !== req.user._id.toString()) {
+        return res.status(403).send({ message: 'You don’t have permission to delete this material.' });
+      }
+    }
+
+    // Delete the study material
     const id = req.params.id;
     await StudyMaterial.findByIdAndDelete(id);
+
+    // Return success message
     res.status(200).send({ message: 'Study material deleted successfully!' });
+
   } catch (error) {
+    // Handle any errors that occur
     res.status(400).send({ message: error.message });
   }
 };
+
 
 exports.getStudyMaterialsBySubject = async (req, res) => {
   try {

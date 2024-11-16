@@ -19,6 +19,7 @@ const routes = [
   { path: "/api/studentmarks", route: require("./routes/studentMarksRoutes") },
   { path: "/api/online/payment", route: require("./routes/razorpayRoutes") },
   { path: "/api/studymaterial", route: require("./routes/studyMaterialRoutes") },
+  { path: "/api/banners", route: require("./routes/bannerRoutes") }, // Added banner route
 ];
 
 const app = express();
@@ -35,6 +36,9 @@ app.use(express.json());
 routes.forEach((route) => {
   app.use(route.path, route.route);
 });
+
+// Serve uploaded images (static files from the "uploads" folder)
+app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // Serve banner images
 
 // Serve static files
 app.use(express.static(path.join(__dirname, "build")));

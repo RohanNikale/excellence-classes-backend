@@ -45,7 +45,7 @@ router.get('/batch/:batchid/students', auth(["admin", "teacher"]), getStudentsBy
 router.get('/batch/:batchid/studentswithfees', auth(["admin"]), getFeesByBatch);  
 
 // Upload a file (Admin only)
-router.post("/upload", auth(["admin"]), upload.single('file'), uploadFile);  
+router.post("/upload", auth(["admin",'teacher']), upload.single('file'), uploadFile);  
 
 // Get all users except students (Admin only)
 router.get("/staff/profiles", auth(["admin"]), getAllUsersExceptStudents);  
