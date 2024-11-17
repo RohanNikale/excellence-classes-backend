@@ -92,7 +92,25 @@ exports.verifyPayment = async (req, res) => {
         // Subtract the payment amount from the student's pending fee
         user.pendingFee = Math.max(0, (user.pendingFee || 0) - feePayment.amount);
         await user.save();
-  
+        let today = new Date();
+        let dd = String(today.getDate()).padStart(2, '0');
+        let mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+        let yyyy = today.getFullYear();
+        today = mm + '/' + dd + '/' + yyyy;
+        sendWhatsAppFeePaymentNotification(
+          `+91${user.parentContactNumber}`,
+          `Mr/Ms. ${user.parentName}`,    // Parent's Name
+          user.name,  // Student's Name
+          user.batch.standard.name,     // Student's Class
+          user.batch.name,       // Batch Name
+          amount,         // Payment Amount
+          today,    // Payment Date
+          user.pendingFee,         // Pending Fee
+          '+919021402272', // Support Phone Number
+          'Excellence Coaching Classes'  // Institute Name
+        )
+          .then((res) => console.log('Message sent successfully:', res))
+          .catch((err) => console.error('Failed to send message:', err));
         res.json({ success: true, message: "Payment verified successfully", feePayment });
       } else {
         // Payment verification failed

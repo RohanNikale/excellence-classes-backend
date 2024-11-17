@@ -1,6 +1,7 @@
 // controllers/FeePaymentController.js
 const FeePayment = require("../models/FeePaymentModel");
 const User = require("../models/userModel"); // Include the User model
+const sendWhatsAppFeePaymentNotification = require('../middlewares/sendWhatsAppFeePaymentNotification');
 
 // Generate a unique transaction ID
 const generateUniqueTransactionId = async () => {
@@ -27,7 +28,14 @@ exports.addTransaction = async (req, res) => {
 
   try {
     // Find the student to check their pending fee
-    const user = await User.findById(student);
+    const user = await User.findById(student).populate({
+      path: "batch",
+      select: "name standard",
+      populate: {
+        path: "standard",
+        select: "name"
+      }
+    });
     if (!user) {
       return res.status(404).json({ message: "Student not found" });
     }
@@ -58,7 +66,25 @@ exports.addTransaction = async (req, res) => {
     // Update the student's pending fee after payment
     user.pendingFee = Math.max(0, (user.pendingFee || 0) - amount); // Ensure it doesn't go below 0
     await user.save();
-
+    let today = new Date();
+    let dd = String(today.getDate()).padStart(2, '0');
+    let mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+    let yyyy = today.getFullYear();
+    today = mm + '/' + dd + '/' + yyyy;
+    sendWhatsAppFeePaymentNotification(
+      `+91${user.parentContactNumber}`,
+      `Mr/Ms. ${user.parentName}`,    // Parent's Name
+      user.name,  // Student's Name
+      user.batch.standard.name,     // Student's Class
+      user.batch.name,       // Batch Name
+      amount,         // Payment Amount
+      today,    // Payment Date
+      user.pendingFee,         // Pending Fee
+      '+919021402272', // Support Phone Number
+      'Excellence Coaching Classes'  // Institute Name
+    )
+      .then((res) => console.log('Message sent successfully:', res))
+      .catch((err) => console.error('Failed to send message:', err));
     res.status(201).json({ message: "Transaction added successfully", FeePayment: newFeePayment });
   } catch (error) {
     console.error("Error adding transaction:", error);

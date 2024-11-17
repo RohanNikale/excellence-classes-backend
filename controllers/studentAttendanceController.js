@@ -1,7 +1,7 @@
 // controllers/attendanceController.js
 const Attendance = require("../models/studentAttendanceModel");
 const User = require("../models/userModel");
-
+const sendWhatsAppAbsentNotification = require('../middlewares/sendWhatsAppAbsentNotificationMiddleware')
 // Helper function to adjust student's attendance count based on status change
 function adjustStudentAttendanceCounts(student, status, increment) {
   switch (status) {
@@ -83,14 +83,27 @@ exports.markAttendance = async (req, res) => {
 // Mark Bulk Attendance for multiple students
 exports.markBulkAttendance = async (req, res) => {
   const { attendances } = req.body;
-
+  console.log(attendances)
   if (!Array.isArray(attendances) || attendances.length === 0) {
     return res.status(400).json({ message: "Invalid input: 'attendances' must be a non-empty array." });
   }
 
   try {
     const bulkOperations = attendances.map(async ({ studentId, status, date }) => {
-      const student = await User.findById(studentId);
+      const student = await User.findById(studentId)
+        .populate({
+          path: "batch",
+          select: "name standard",
+          populate: {
+            path: "standard",
+            select: "name"
+          }
+        });
+      // console.log(student.parentContactNumber)
+      if (status === 'absent') {
+        sendWhatsAppAbsentNotification(`+91${student.parentContactNumber}`,"Parent",student.name,`${student.batch.standard.name} From ${student.batch.name}`,date)
+      }
+
       if (!student || student.role !== "student" || !["active", "re-enrolled"].includes(student.status)) {
         return { studentId, error: "Student not found or inactive" };
       }
@@ -213,19 +226,19 @@ exports.getAttendanceByStudent = async (req, res) => {
 
   try {
     // Count total attendance records for pagination, applying date filter if provided
-    const totalRecords = await Attendance.countDocuments({ 
-      student: studentId, 
+    const totalRecords = await Attendance.countDocuments({
+      student: studentId,
       ...(Object.keys(dateFilter).length && { date: dateFilter })
     });
-    
+
     // Calculate total pages
     const totalPages = Math.ceil(totalRecords / limit);
-    
+
     // Fetch attendance records with pagination and date filter
-    const attendanceRecords = await Attendance.find({ 
-        student: studentId, 
-        ...(Object.keys(dateFilter).length && { date: dateFilter })
-      })
+    const attendanceRecords = await Attendance.find({
+      student: studentId,
+      ...(Object.keys(dateFilter).length && { date: dateFilter })
+    })
       .populate("student", "name status") // Include status field in population
       .populate("markedBy", "name role") // Populate markedBy field to include name
       .sort({ date: -1 })
@@ -233,7 +246,7 @@ exports.getAttendanceByStudent = async (req, res) => {
       .limit(limit); // Limit records to the specified limit
 
     // Filter to include only active or re-enrolled students
-    const filteredRecords = attendanceRecords.filter(record => 
+    const filteredRecords = attendanceRecords.filter(record =>
       record.student.status && ["active", "re-enrolled"].includes(record.student.status)
     );
 

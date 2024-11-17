@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Excellace",
+  "name": "Excellace Coaching Classes - 5th to 12th Standard Coaching",
   "icons": [
     {
       "src": "favicon.ico",
@@ -16,10 +16,27 @@
       "src": "logo512.png",
       "type": "image/png",
       "sizes": "512x512"
+    },
+    {
+      "src": "android-icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "android-icon-256x256.png",
+      "type": "image/png",
+      "sizes": "256x256"
+    },
+    {
+      "src": "apple-touch-icon.png",
+      "type": "image/png",
+      "sizes": "180x180"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "orientation": "portrait",
+  "theme_color": "#0d6efd",
+  "background_color": "#ffffff",
+  "description": "Excellace Coaching Classes provides expert guidance for students from 5th to 12th standard in Hindi, Marathi, and English mediums. We cover all subjects with comprehensive study materials and modern teaching techniques."
 }
