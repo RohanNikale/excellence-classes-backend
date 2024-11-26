@@ -1,12 +1,23 @@
 require("dotenv").config();
 
-// server.js
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
 const path = require("path");
 
-// Import routes
+const app = express();
+
+// Dynamic PORT for deployment
+const PORT = process.env.PORT || 5000;
+
+// Connect to the database
+connectDB();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Define routes
 const routes = [
   { path: "/api/payments", route: require("./routes/paymentRoutes") },
   { path: "/api/mcqtest", route: require("./routes/onlineMCQtestRoutes") },
@@ -19,36 +30,26 @@ const routes = [
   { path: "/api/studentmarks", route: require("./routes/studentMarksRoutes") },
   { path: "/api/online/payment", route: require("./routes/razorpayRoutes") },
   { path: "/api/studymaterial", route: require("./routes/studyMaterialRoutes") },
-  { path: "/api/banners", route: require("./routes/bannerRoutes") }, // Added banner route
+  { path: "/api/banners", route: require("./routes/bannerRoutes") },
 ];
 
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-// Connect to database
-connectDB();
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// Register routes
+// Register all routes
 routes.forEach((route) => {
   app.use(route.path, route.route);
 });
 
-// Serve uploaded images (static files from the "uploads" folder)
-app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // Serve banner images
+// Serve uploaded images (from "uploads" folder)
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Serve static files
+// Serve static files (React build folder)
 app.use(express.static(path.join(__dirname, "build")));
 
-// Catch-all route for client-side rendering
+// Catch-all route for React client-side routing
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
-// Start server
+// Start the server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

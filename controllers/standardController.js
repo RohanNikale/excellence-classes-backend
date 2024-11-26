@@ -34,7 +34,7 @@ exports.updateStandard = async (req, res) => {
 // Delete a standard
 exports.deleteStandard = async (req, res) => {
   try {
-    await Standard.findByIdAndDelete(req.params.id);
+    // await Standard.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: "Standard deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: "Error deleting standard" });
