@@ -7,10 +7,7 @@ const path = require("path");
 
 const app = express();
 
-// Dynamic PORT for deployment
-const PORT = process.env.PORT || 5000;
-
-// Connect to the database
+// Connect to database
 connectDB();
 
 // Middleware
@@ -38,18 +35,21 @@ routes.forEach((route) => {
   app.use(route.path, route.route);
 });
 
-// Serve uploaded images (from "uploads" folder)
+// Serve uploaded images
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Serve static files (React build folder)
+// Serve static files
 app.use(express.static(path.join(__dirname, "build")));
 
-// Catch-all route for React client-side routing
+// Catch-all route
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Start server only if not in Vercel build
+if (process.env.NODE_ENV !== "production") {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
