@@ -1,6 +1,6 @@
 const express = require('express');
 const StudyMaterial = require('../models/studyMaterialModel');
-
+const deleteDriveFileByUrl=require('../middlewares/deleteFileFromDrive')
 exports.createStudyMaterial = async (req, res) => {
   try {
     const studyMaterial = new StudyMaterial({
@@ -92,9 +92,9 @@ exports.updateStudyMaterial = async (req, res) => {
 exports.deleteStudyMaterial = async (req, res) => {
   try {
     // Check if the user is a teacher
+    let material = await StudyMaterial.findById(req.params.id);
     if (req.user.role === 'teacher') {
-      let material = await StudyMaterial.findById(req.params.id);
-
+      
       // Check if the teacher is the one who uploaded the material
       if (material.uploadedBy.toString() !== req.user._id.toString()) {
         return res.status(403).send({ message: 'You don’t have permission to delete this material.' });
@@ -104,6 +104,10 @@ exports.deleteStudyMaterial = async (req, res) => {
     // Delete the study material
     const id = req.params.id;
     await StudyMaterial.findByIdAndDelete(id);
+    if(!(material.filePath==="")){  
+      deleteDriveFileByUrl(material.filePath)
+    }
+
 
     // Return success message
     res.status(200).send({ message: 'Study material deleted successfully!' });

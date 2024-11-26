@@ -46,7 +46,7 @@ exports.updateBatch = async (req, res) => {
 // Delete a batch
 exports.deleteBatch = async (req, res) => {
   try {
-    await Batch.findByIdAndDelete(req.params.id);
+    // await Batch.findByIdAndDelete(req.params.id);
     res.status(200).json({ message: "Batch deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: "Error deleting batch" });
