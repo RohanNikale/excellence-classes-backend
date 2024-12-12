@@ -1,12 +1,13 @@
-// controllers/fileController.js
 const { google } = require('googleapis');
 const { PassThrough } = require('stream');
-const path = require('path');
 
-const keyFilePath = path.join(__dirname, '..', 'config', 'excellence-coaching-centre-03318aed9cbe.json');
+// Decode the base64-encoded Google Service Account credentials
+const credentials = JSON.parse(
+  Buffer.from(process.env.GOOGLE_DRIVE_CREDENTIALS, 'base64').toString('utf8')
+);
 
 const auth = new google.auth.GoogleAuth({
-  keyFile: keyFilePath,
+  credentials,
   scopes: ['https://www.googleapis.com/auth/drive.file'],
 });
 

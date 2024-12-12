@@ -96,39 +96,49 @@ exports.getUserProfile = async (req, res) => {
   const { userId } = req.params;
 
   try {
-    // Check if the requesting user has permission to access the profile
-    if (req.user.role !== "admin" && req.user.id !== userId) {
-      // Check if the user is a teacher trying to access a student profile
-      if (req.user.role === "teacher") {
-        const student = await User.findById(userId).select("status");
+    // Restrict access based on the requesting user's role
+    if (req.user.role === "student") {
+      return res.status(403).json({ message: "Access denied. Students cannot access profiles." });
+    }
 
-        // Ensure the student is active or re-enrolled
-        if (!student || !["active", "re-enrolled"].includes(student.status)) {
-          return res.status(403).json({ message: "Access denied to inactive or not re-enrolled student" });
-        }
-      } else {
-        return res.status(403).json({ message: "Access denied" });
+    if (req.user.role === "teacher") {
+      // Fetch the user being accessed to check their role
+      const targetUser = await User.findById(userId).select("role status");
+
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Restrict access to other teachers and admins
+      if (targetUser.role === "teacher" || targetUser.role === "admin") {
+        return res.status(403).json({ message: "Access denied. Teachers cannot access profiles of other teachers or admins." });
+      }
+
+      // Ensure the student is active or re-enrolled
+      if (!["active", "re-enrolled"].includes(targetUser.status)) {
+        return res.status(403).json({ message: "Access denied to inactive or not re-enrolled students." });
       }
     }
 
-    // Find user by ID and populate the batch
+    // Admins can access everyone's profiles, so no additional checks are needed for them
+
+    // Fetch the full user profile with populated fields
     const user = await User.findById(userId)
       .select("-password") // Exclude password
       .populate({
-        path: 'batch',
-        select: '_id name standard', // Include the fields you want from batch
+        path: "batch",
+        select: "_id name standard", // Include the fields you want from batch
         populate: {
-          path: 'standard', // If the batch has a reference to the standard, populate that as well
-          select: 'name' // Include only the name field from the standard
-        }
+          path: "standard", // If the batch has a reference to the standard, populate that as well
+          select: "name", // Include only the name field from the standard
+        },
       });
 
-    // Check if user is found
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Remove fees-related information if the user is a teacher
+    // Remove fees-related information if the requester is a teacher
     if (req.user.role === "teacher") {
       user.totalFee = undefined;
       user.pendingFee = undefined;
@@ -142,6 +152,7 @@ exports.getUserProfile = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 exports.getUserBatches = async (req, res) => {
   const userId = req.user.role === "admin" ? req.params.userId : req.user._id; // Determine the user ID based on the role
 

@@ -65,6 +65,21 @@ exports.markAttendance = async (req, res) => {
       await attendance.save();
     }
 
+    // Send WhatsApp notification if the student is marked absent
+    if (status === "absent") {
+      try {
+        await sendWhatsAppAbsentNotification(
+          `+91${student.parentContactNumber}`,
+          "Parent",
+          student.name,
+          `${student.batch.standard.name} From ${student.batch.name}`,
+          date
+        );
+      } catch (notificationError) {
+        console.error("Failed to send WhatsApp notification:", notificationError.message);
+      }
+    }
+
     // Adjust attendance count for the new status and calculate the updated score
     adjustStudentAttendanceCounts(student, status, 1);
     calculateStudentScore(student);
@@ -83,7 +98,7 @@ exports.markAttendance = async (req, res) => {
 // Mark Bulk Attendance for multiple students
 exports.markBulkAttendance = async (req, res) => {
   const { attendances } = req.body;
-  console.log(attendances)
+
   if (!Array.isArray(attendances) || attendances.length === 0) {
     return res.status(400).json({ message: "Invalid input: 'attendances' must be a non-empty array." });
   }
@@ -99,10 +114,6 @@ exports.markBulkAttendance = async (req, res) => {
             select: "name"
           }
         });
-      // console.log(student.parentContactNumber)
-      if (status === 'absent') {
-        sendWhatsAppAbsentNotification(`+91${student.parentContactNumber}`,"Parent",student.name,`${student.batch.standard.name} From ${student.batch.name}`,date)
-      }
 
       if (!student || student.role !== "student" || !["active", "re-enrolled"].includes(student.status)) {
         return { studentId, error: "Student not found or inactive" };
@@ -128,6 +139,21 @@ exports.markBulkAttendance = async (req, res) => {
           date: attendanceDate
         });
         await attendance.save();
+      }
+
+      // Send WhatsApp notification if the student is marked absent
+      if (status === "absent") {
+        try {
+          await sendWhatsAppAbsentNotification(
+            `+91${student.parentContactNumber}`,
+            "Parent",
+            student.name,
+            `${student.batch.standard.name} From ${student.batch.name}`,
+            date
+          );
+        } catch (notificationError) {
+          console.error(`Failed to send WhatsApp notification for student ${student.name}:`, notificationError.message);
+        }
       }
 
       // Adjust attendance count for the new status and calculate the updated score

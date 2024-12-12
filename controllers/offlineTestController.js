@@ -16,67 +16,90 @@ exports.createTest = async (req, res) => {
 };
 
 // Get all offline tests
+
+
+
+
+
+
 exports.getAllOfflineTests = async (req, res) => {
-    try {
+  try {
       let tests;
-  
+
       // Get the date from the query, defaulting to today's date if not provided
       const queryDate = req.query.date ? new Date(req.query.date) : new Date();
       queryDate.setHours(0, 0, 0, 0); // Start of the query date
-      const nextDay = new Date(queryDate);
-      nextDay.setDate(queryDate.getDate() + 1); // Start of the following date
-  
-      // Define the fields to populate in the batch
-      const batchPopulationFields = { 
-        path: 'batch', 
-        select: ['name', 'standard'], // Specify which fields to select from the batch
-        populate: { path: 'standard', select: 'name' } // Populate the standard field if needed
-      };
-  
-      // Admin: Get all offline tests for the specified date range
-      if (req.user.role === 'admin') {
-        tests = await OfflineTest.find({ 
-          testDate: { 
-            $gte: queryDate, 
-            $lt: nextDay 
-          }
-        })
-        .populate(batchPopulationFields);
-  
-      // Teacher: Get offline tests for the teacher's batches within the specified date range
-      } else if (req.user.role === 'teacher') {
-        tests = await OfflineTest.find({ 
-          batch: { $in: req.user.teacherBatches },
-          testDate: { 
-            $gte: queryDate, 
-            $lt: nextDay 
-          }
-        })
-        .populate(batchPopulationFields);
-  
-      // Student: Get offline tests for the student's batch within the specified date range
-      } else if (req.user.role === 'student') {
-        tests = await OfflineTest.find({ 
-          batch: req.user.batch,
-          testDate: { 
-            $gte: queryDate, 
-            $lt: nextDay 
-          }
-        })
-        .populate(batchPopulationFields);
-  
 
-  
+      // Pagination parameters
+      const page = parseInt(req.query.page) || 1; // Default to page 1
+      const limit = parseInt(req.query.limit) || 20; // Default to 10 items per page
+      const skip = (page - 1) * limit;
+
+      // Define the fields to populate in the batch
+      const batchPopulationFields = {
+          path: 'batch',
+          select: ['name', 'standard'], // Specify which fields to select from the batch
+          populate: { path: 'standard', select: 'name' } // Populate the standard field if needed
+      };
+
+      // Admin: Get all offline tests from today's date onward
+      if (req.user.role === 'admin') {
+          tests = await OfflineTest.find({
+              testDate: {
+                  $gte: queryDate
+              }
+          })
+          .populate(batchPopulationFields)
+          .skip(skip)
+          .limit(limit);
+
+      // Teacher: Get offline tests for the teacher's batches from today's date onward
+      } else if (req.user.role === 'teacher') {
+          tests = await OfflineTest.find({
+              batch: { $in: req.user.teacherBatches },
+              testDate: {
+                  $gte: queryDate
+              }
+          })
+          .populate(batchPopulationFields)
+          .skip(skip)
+          .limit(limit);
+
+      // Student: Get offline tests for the student's batch from today's date onward
+      } else if (req.user.role === 'student') {
+          tests = await OfflineTest.find({
+              batch: req.user.batch,
+              testDate: {
+                  $gte: queryDate
+              }
+          })
+          .populate(batchPopulationFields)
+          .skip(skip)
+          .limit(limit);
+
       } else {
-        return res.status(403).json({ message: 'Unauthorized role' });
+          return res.status(403).json({ message: 'Unauthorized role' });
       }
-  
-      // Send the filtered tests for admin or teacher
-      res.status(200).json(tests);
-    } catch (error) {
+
+      // Count total documents for pagination metadata
+      const totalDocuments = await OfflineTest.countDocuments({
+          testDate: {
+              $gte: queryDate
+          }
+      });
+
+      // Send the filtered tests with pagination metadata
+      res.status(200).json({
+          totalDocuments,
+          currentPage: page,
+          totalPages: Math.ceil(totalDocuments / limit),
+          tests
+      });
+  } catch (error) {
       res.status(500).json({ message: 'Error fetching tests', error: error.message });
-    }
-  };
+  }
+};
+
   
 
 // Get a specific test by ID

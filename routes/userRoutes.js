@@ -56,4 +56,4 @@ router.get("/search-users", auth(["admin","teacher"]), searchUsers);
 // Route to get top score students with optional batch filter and pagination
 router.get("/top-scorers",auth(["admin","teacher",'student']), getTopScoreStudents);
 
-module.exports = router;
+module.exports = router;    
