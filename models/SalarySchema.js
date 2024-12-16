@@ -7,6 +7,8 @@ const salarySchema = new mongoose.Schema({
   totalDaysInMonth: { type: Number, required: true },
   month: { type: Number, required: true },
   year: { type: Number, required: true },
+  advance: { type: Number, default: 0 }, // Advance payment field
+  bonus: { type: Number, default: 0 }, // Bonus field
   paymentMethod: { 
     type: String, 
     enum: ["cash", "cheque", "bank_transfer", "pending"], 
@@ -14,7 +16,7 @@ const salarySchema = new mongoose.Schema({
   },
   status: { 
     type: String, 
-    enum: ["paid", "unpaid","pending"], 
+    enum: ["paid", "unpaid", "pending"], 
     default: "unpaid" 
   },
 });

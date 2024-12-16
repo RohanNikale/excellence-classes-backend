@@ -18,17 +18,17 @@ const bulkUpdatePaymentDetails = async (req, res) => {
 
     // Prepare bulk operations
     const bulkOps = updates.map((update) => {
-      const { salaryId, paymentMethod, status, salary } = update;
+      const { salaryId, paymentMethod, status, salary, advance, bonus } = update;
 
       // Validate individual update fields
       if (!salaryId || !paymentMethod || !status || salary == null) {
-        throw new Error('Salary ID, payment method, status, and salary are required for each update.');
+        throw new Error('Salary ID, payment method, status, salary are required for each update.');
       }
 
       return {
         updateOne: {
           filter: { _id: salaryId },
-          update: { paymentMethod, status, salary },
+          update: { paymentMethod, status, salary, advance, bonus }, // Include advance and bonus
         },
       };
     });
@@ -46,19 +46,24 @@ const bulkUpdatePaymentDetails = async (req, res) => {
     // Send WhatsApp notification if the status is "paid"
     for (const update of updates) {
       if (update.status === 'Paid') {
-        const salary = await Salary.findById(update.salaryId).populate('user', 'name personalContactNumber role'); // Populate user details
-        if (salary) {
-          // Send WhatsApp notification
-          await sendWhatsAppSalaryPaymentNotification(
-            `91${salary.user.personalContactNumber}`, // Employee phone number
-            salary.user.name,                  // Employee name
-            salary.salary,                     // Payment amount
-            new Date(),                        // Payment date
-            salary.paymentMethod,              // Payment method
-            salary.user.role || 'Employee', // Employee designation
-            process.env.INSTITUTE_NAME,        // Institute name
-            process.env.SUPPORT_PHONE_NUMBER   // Support phone number
-          );
+        try {
+          const salary = await Salary.findById(update.salaryId).populate('user', 'name personalContactNumber role'); // Populate user details
+          if (salary) {
+            // Send WhatsApp notification
+            await sendWhatsAppSalaryPaymentNotification(
+              `91${salary.user.personalContactNumber}`, // Employee phone number
+              salary.user.name,                          // Employee name
+              salary.salary,                             // Payment amount
+              new Date(),                                // Payment date
+              salary.paymentMethod,                      // Payment method
+              salary.user.role || 'Employee',            // Employee designation
+              process.env.INSTITUTE_NAME,                // Institute name
+              process.env.SUPPORT_PHONE_NUMBER           // Support phone number
+            );
+          }
+        } catch (notificationError) {
+          console.error('Error sending WhatsApp notification:', notificationError);
+          // Optionally, log the error or take additional actions
         }
       }
     }
@@ -72,6 +77,11 @@ const bulkUpdatePaymentDetails = async (req, res) => {
   }
 };
 
+module.exports = {
+  bulkUpdatePaymentDetails,
+};
+
+// Controller function to fetch all salaries for a given month and year
 const getAllSalaries = async (req, res) => {
   try {
     // Extract month and year from request query
@@ -89,7 +99,7 @@ const getAllSalaries = async (req, res) => {
     const salaries = await Salary.find({
       month: parseInt(month, 10),
       year: parseInt(year, 10),
-    }).populate('user', 'name role'); // Adjust fields ('name email') as needed from the User schema
+    }).populate('user', 'name role advance bonus'); // Include advance and bonus in populated fields
 
     // Send a success response
     res.status(200).json({
@@ -107,6 +117,7 @@ const getAllSalaries = async (req, res) => {
   }
 };
 
+// Controller function to fetch salary history for a user
 const getUserSalaryHistory = async (req, res) => {
   try {
     // Extract user ID from request parameters
@@ -116,6 +127,7 @@ const getUserSalaryHistory = async (req, res) => {
     const userIdFromContext = req.user._id;
 
     // Check if the logged-in user is an admin
+    let userId;
     if (req.user.role === 'admin') {
       // If user is an admin, use the user ID from params
       userId = userIdFromParams;
@@ -133,7 +145,7 @@ const getUserSalaryHistory = async (req, res) => {
     // Fetch salary records for the user with pagination
     const salaryHistory = await Salary.find({ user: userId })
       .sort({ paymentDate: -1 }) // Sort by payment date in descending order
-      .populate('user', 'name role') // Populate user details
+      .populate('user', 'name role advance bonus') // Populate user details, including advance and bonus
       .skip((pageNum - 1) * limitNum) // Skip records for pagination
       .limit(limitNum); // Limit the number of records returned
 
@@ -165,10 +177,9 @@ const getUserSalaryHistory = async (req, res) => {
   }
 };
 
-
 // Export the controllers
 module.exports = {
   bulkUpdatePaymentDetails,
   getAllSalaries,
-  getUserSalaryHistory
+  getUserSalaryHistory,
 };
