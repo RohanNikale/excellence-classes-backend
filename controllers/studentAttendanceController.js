@@ -1,7 +1,7 @@
 // controllers/attendanceController.js
 const Attendance = require("../models/studentAttendanceModel");
 const User = require("../models/userModel");
-const sendWhatsAppAbsentNotification = require('../middlewares/sendWhatsAppAbsentNotificationMiddleware')
+const sendEmailAbsentNotification = require('../middlewares/sendWhatsAppAbsentNotificationMiddleware')
 // Helper function to adjust student's attendance count based on status change
 function adjustStudentAttendanceCounts(student, status, increment) {
   switch (status) {
@@ -68,7 +68,7 @@ exports.markAttendance = async (req, res) => {
     // Send WhatsApp notification if the student is marked absent
     if (status === "absent") {
       try {
-        await sendWhatsAppAbsentNotification(
+        await sendEmailAbsentNotification(
           `+91${student.parentContactNumber}`,
           "Parent",
           student.name,
@@ -144,8 +144,8 @@ exports.markBulkAttendance = async (req, res) => {
       // Send WhatsApp notification if the student is marked absent
       if (status === "absent") {
         try {
-          await sendWhatsAppAbsentNotification(
-            `+91${student.parentContactNumber}`,
+          await sendEmailAbsentNotification(
+            'rohannikale75@gmail.com',
             "Parent",
             student.name,
             `${student.batch.standard.name} From ${student.batch.name}`,
