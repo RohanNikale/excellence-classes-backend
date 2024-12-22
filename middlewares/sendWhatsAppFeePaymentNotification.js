@@ -84,7 +84,7 @@ async function sendEmailFeePaymentNotification(
               <td style="padding: 8px; border: 1px solid #ddd;">${pendingFee}</td>
             </tr>
           </table>
-          <p style="font-size: 16px;">For any queries, feel free to contact us at <strong>${supportPhoneNumber}</strong>.</p>
+          <p style="font-size: 16px;">For any queries, feel free to contact us at <strong>+91 9834997426 or +91 9156337739</strong>.</p>
           <p style="margin-top: 20px; font-size: 16px;">Best regards,</p>
           <p style="font-size: 16px; color: #5a4d91; font-weight: bold;">Excellence Coaching Classes</p>
         </div>
