@@ -5,6 +5,7 @@ const FeePayment = require("../models/FeePaymentModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const generateUniqueId = require('../middlewares/generateUniqueId');
+const sendRegistrationEmail = require('../middlewares/registrationMailer');
 
 // Register User
 exports.registerUser = async (req, res) => {
@@ -95,6 +96,22 @@ exports.registerUser = async (req, res) => {
               paymentGateway: "manual" // Mark as manual payment since added by user
           });
           await paymentEntry.save();
+      }
+
+      // Send registration email for all roles (student, teacher, employee)
+      try {
+
+
+          await sendRegistrationEmail(
+              email, // User's email
+              name, // User's name
+              role,
+              email, // ECC App Email
+              password // ECC App Password
+          );
+      } catch (emailError) {
+          console.error("Error sending registration email:", emailError.message);
+          // Log the error but don't fail registration
       }
 
       res.status(201).json({ message: "User registered successfully", user: newUser });

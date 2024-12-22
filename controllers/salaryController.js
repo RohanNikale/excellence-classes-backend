@@ -47,18 +47,19 @@ const bulkUpdatePaymentDetails = async (req, res) => {
     for (const update of updates) {
       if (update.status === 'Paid') {
         try {
-          const salary = await Salary.findById(update.salaryId).populate('user', 'name personalContactNumber role'); // Populate user details
+          const salary = await Salary.findById(update.salaryId).populate('user', 'name email role'); // Populate user details
           if (salary) {
             // Send WhatsApp notification
             await sendWhatsAppSalaryPaymentNotification(
-              `91${salary.user.personalContactNumber}`, // Employee phone number
+              salary.user.email, // Employee phone number
               salary.user.name,                          // Employee name
               salary.salary,                             // Payment amount
               new Date(),                                // Payment date
               salary.paymentMethod,                      // Payment method
               salary.user.role || 'Employee',            // Employee designation
-              process.env.INSTITUTE_NAME,                // Institute name
-              process.env.SUPPORT_PHONE_NUMBER           // Support phone number
+              process.env.SUPPORT_PHONE_NUMBER ,        // Support phone number
+              salary.advance,
+              salary.bonus
             );
           }
         } catch (notificationError) {

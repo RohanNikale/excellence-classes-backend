@@ -72,7 +72,7 @@ exports.addTransaction = async (req, res) => {
     let yyyy = today.getFullYear();
     today = mm + '/' + dd + '/' + yyyy;
     sendWhatsAppFeePaymentNotification(
-      `+91${user.parentContactNumber}`,
+      user.email,
       `Mr/Ms. ${user.parentName}`,    // Parent's Name
       user.name,  // Student's Name
       user.batch.standard.name,     // Student's Class
@@ -80,7 +80,7 @@ exports.addTransaction = async (req, res) => {
       amount,         // Payment Amount
       today,    // Payment Date
       user.pendingFee,         // Pending Fee
-      '+919021402272', // Support Phone Number
+      '+91 9834997426 or +91 9156337739', // Support Phone Number
       'Excellence Coaching Classes'  // Institute Name
     )
       .then((res) => console.log('Message sent successfully:', res))

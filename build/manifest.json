@@ -1,6 +1,6 @@
 {
-  "short_name": "Excellace",
-  "name": "Excellace Coaching Classes - 5th to 12th Standard Coaching",
+  "short_name": "Excellence",
+  "name": "Excellence Coaching Classes",
   "icons": [
     {
       "src": "favicon.ico",
@@ -34,9 +34,9 @@
     }
   ],
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "orientation": "portrait",
-  "theme_color": "#0d6efd",
+  "theme_color": "#c93131",
   "background_color": "#ffffff",
-  "description": "Excellace Coaching Classes provides expert guidance for students from 5th to 12th standard in Hindi, Marathi, and English mediums. We cover all subjects with comprehensive study materials and modern teaching techniques."
+  "description": "Excellence Coaching Classes provides expert guidance for students from 5th to 12th standard in Hindi, Marathi, and English mediums. We cover all subjects with comprehensive study materials and modern teaching techniques."
 }

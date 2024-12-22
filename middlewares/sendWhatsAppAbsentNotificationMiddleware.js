@@ -24,11 +24,13 @@ async function sendAbsentNotificationEmail(parentEmail, parentName, studentName,
         <div style="padding: 20px;">
           <h2 style="color: #5a4d91;">Hello ${parentName},</h2>
           <p style="font-size: 16px;">
-            This is to inform you that your child <strong>${studentName}</strong> from <strong>${studentClass}</strong> 
+            This is to inform you that your child <strong>${studentName}</strong> <strong>${studentClass} Batch</strong> 
             was absent on <strong>${dateOfAbsence}</strong>.
           </p>
           <p style="font-size: 16px;">Please ensure to address this absence with your child to prevent any gaps in their education.</p>
           <p style="font-size: 16px;">If you have any questions, feel free to contact us.</p>
+          <p style="font-size: 16px;">+91 9834997426 or +91 9156337739</p>
+
           <p style="margin-top: 20px; font-size: 16px;">Best regards,</p>
           <p style="font-size: 16px; color: #5a4d91; font-weight: bold;">Excellence Coaching Classes</p>
         </div>

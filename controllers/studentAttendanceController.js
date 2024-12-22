@@ -145,7 +145,7 @@ exports.markBulkAttendance = async (req, res) => {
       if (status === "absent") {
         try {
           await sendEmailAbsentNotification(
-            'rohannikale75@gmail.com',
+            student.email,
             "Parent",
             student.name,
             `${student.batch.standard.name} From ${student.batch.name}`,
