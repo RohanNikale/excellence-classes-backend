@@ -6,7 +6,7 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 const path = require("path");
 const User = require("./models/userModel");
-const StaffAttendance = require("./models/staffAttendanceModel");
+
 
 
 require('./cron-jobs/salaryCron');
@@ -24,7 +24,9 @@ const routes = [
   { path: "/api/online/payment", route: require("./routes/razorpayRoutes") },
   { path: "/api/studymaterial", route: require("./routes/studyMaterialRoutes") },
   { path: "/api/salary", route: require("./routes/salaryRoutes") },
-  { path: "/api/banners", route: require("./routes/bannerRoutes") }, // Added banner route
+  { path: "/api/banners", route: require("./routes/bannerRoutes") },
+  { path: "/api/events", route: require("./routes/eventRoutes") },
+
 ];
 
 const app = express();
